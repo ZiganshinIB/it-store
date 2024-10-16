@@ -189,12 +189,14 @@ class Approve(models.Model):
     """
     STATUS = (
         ('new', 'Новый'),
+        ('prg', 'В работе'),
         ('aprv', 'Согласованный'),
         ('cans', 'Отменен'),
         ('clos', 'Откланен'),
     )
     title = models.CharField(max_length=100, verbose_name='Заголовок')
     description = models.TextField(verbose_name='Описание', blank=True, null=True)
+    order_number = models.IntegerField(verbose_name='Порядковый номер', blank=True, null=True, default=None)
     author = models.ForeignKey(UserModel, on_delete=models.SET_NULL, null=True, verbose_name='Автор', related_name='author_approve')
     on_request = models.ForeignKey(Request, on_delete=models.SET_NULL, null=True, verbose_name='Заявка', related_name='approves')
     coordinating = models.ForeignKey(UserModel, on_delete=models.SET_NULL, null=True, verbose_name='Согласователь', related_name='coordinating_approve')
