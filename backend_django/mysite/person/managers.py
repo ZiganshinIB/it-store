@@ -48,7 +48,11 @@ class PersonManager(BaseUserManager):
             raise ValueError(_('Superuser must have is_staff=True.'))
         if extra_fields.get('is_superuser') is not True:
             raise ValueError(_('Superuser must have is_superuser=True.'))
-        return self.create_user(username, first_name, last_name, password, **extra_fields)
+        return self.create_user(username=username,
+                                first_name=first_name,
+                                last_name=last_name,
+                                password=password,
+                                **extra_fields)
 
     def with_perm(
             self, perm, is_active=True, include_superusers=True, backend=None, obj=None
