@@ -63,7 +63,6 @@ class ApprovalRouteViewSet(viewsets.ModelViewSet):
         serializer.save(author=self.request.user)
 
 
-
 @extend_schema_view(
     list=extend_schema(
         summary="Получить список шаблонных заявок",
@@ -122,8 +121,6 @@ class TaskViewSet(viewsets.ModelViewSet):
     serializer_class = TaskSerializer
     permission_classes = [DjangoModelPermissions]
 
-
-
 class CreateRequestView(generics.CreateAPIView):
     serializer_class = CreateRequestSerializer
     permission_classes = [IsAuthenticated]
@@ -146,10 +143,12 @@ class ListRequestView(generics.ListAPIView):
             response = self.queryset((Q(group__in=user.groups.all()) | Q(author=user) | Q(executor=user)).distinct())
             return response
 
+
 class DetailRequestView(generics.RetrieveAPIView):
     queryset = Request.objects.all()
     serializer_class = ListRequestSerializer
     permission_classes = [DetailRequestPermission]
+
 
 @extend_schema_view(
     get=extend_schema(
@@ -211,24 +210,7 @@ class AppointRequestView(generics.UpdateAPIView):
         self.perform_update(serializer)
 
         if getattr(instance, '_prefetched_objects_cache', None):
-            # If 'prefetch_related' has been applied to a queryset, we need to
-            # forcibly invalidate the prefetch cache on the instance.
             instance._prefetched_objects_cache = {}
 
         return Response(serializer.data)
 
-
-
-
-
-
-
-
-
-# class ApproveRouteCreateView(mixins.CreateModelMixin, GenericViewSet):
-#     queryset = ApprovalRoute.objects.all()
-#     serializer_class = ApprovalRouteSerializer
-#
-#     def perform_create(self, serializer):
-#         # Передаем текущего пользователя в контексте сериализатора
-#         serializer.save(author=self.request.user)
