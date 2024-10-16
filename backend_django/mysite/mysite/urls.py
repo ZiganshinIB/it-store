@@ -23,6 +23,11 @@ from django.shortcuts import redirect
 from django.views.generic import RedirectView
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
+admin.site.site_header = "Админка IT Store"  # Заголовок на всех страницах админки
+admin.site.site_title = "Админ панель"    # Заголовок в HTML
+admin.site.index_title = "Работа с IT Store"   # Заголовок на главной странице админки
+
+
 urlpatterns = [
     path('', lambda request: redirect('/admin/')),
     path('admin/', admin.site.urls),
