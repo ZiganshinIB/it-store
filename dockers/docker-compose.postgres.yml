@@ -1,0 +1,37 @@
+services:
+  django_db:
+    image: postgres:16
+    container_name: django_db
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: "${DJANGO_POSTGRES_USER}"
+      POSTGRES_PASSWORD: "${DJANGO_POSTGRES_PASSWORD}"
+      POSTGRES_DB: "${DJANGO_POSTGRES_DB}"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U burgeruser -d burger" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  django_backend:
+    build:
+      context: .
+      dockerfile: ./backend/Dockerfile
+    image: it-store-backend:latest
+    container_name: it-store-backend
+    environment:
+      SECRET_KEY: "${DJANGO_SECRET_KEY}"
+      DATABASE_URL: "postgres://${DJANGO_POSTGRES_USER}:${DJANGO_POSTGRES_PASSWORD}@django_db:5432/${DJANGO_POSTGRES_DB}"
+      ALLOWED_HOSTS: "${DJANGO_ALLOWED_HOSTS}"
+      DEBUG: "${DJANGO_DEBUG}"
+    ports:
+      - "8000:80"
+    depends_on:
+      pg_db:
+        condition: service_healthy
+
+
+volumes:
+  pg_data:

@@ -1,0 +1,71 @@
+services:
+  postgres-server:
+    image: postgres:16
+    container_name: postgres-server
+    environment:
+      POSTGRES_USER: zabbix
+      POSTGRES_PASSWORD: zabbix_pwd
+      POSTGRES_DB: zabbix
+    networks:
+      zabbix-net:
+        ipv4_address: 172.21.240.242
+    restart: unless-stopped
+
+  zabbix-snmptraps:
+    image: zabbix/zabbix-snmptraps:alpine-7.0-latest
+    container_name: zabbix-snmptraps
+    volumes:
+      - /data/zbx_instance/snmptraps:/var/lib/zabbix/snmptraps:rw
+      - /data/zabbix/mibs:/usr/share/snmp/mibs:ro
+    networks:
+      zabbix-net:
+        ipv4_address: 172.21.240.243
+    ports:
+      - "162:1162/udp"
+    restart: unless-stopped
+
+  zabbix-server-pgsql:
+    image: zabbix/zabbix-server-pgsql:alpine-7.0-latest
+    container_name: zabbix-server-pgsql
+    environment:
+      DB_SERVER_HOST: postgres-server
+      DB_SERVER_PORT: 5432
+      POSTGRES_DB: zabbix
+      POSTGRES_USER: zabbix
+      POSTGRES_PASSWORD: zabbix_pwd
+    volumes:
+      - /data/zbx_instance/zabbix_server:/var/lib/zabbix:rw
+    networks:
+      zabbix-net:
+        ipv4_address: 172.21.240.244
+    ports:
+      - "10051:10051"
+    restart: unless-stopped
+
+  zabbix-web-nginx-pgsql:
+    image: zabbix/zabbix-web-nginx-pgsql:alpine-7.0-latest
+    container_name: zabbix-web-nginx-pgsql
+    environment:
+      ZBX_SERVER_HOST: zabbix-server-pgsql
+      DB_SERVER_HOST: postgres-server
+      DB_SERVER_PORT: 5432
+      POSTGRES_DB: zabbix
+      POSTGRES_USER: zabbix
+      POSTGRES_PASSWORD: zabbix_pwd
+    volumes:
+      - /data/zbx_instance/zabbix_server:/var/lib/zabbix:rw
+    networks:
+      zabbix-net:
+        ipv4_address: 172.21.240.245
+    ports:
+      - "8080:8080"
+      - "8443:8443"
+    restart: unless-stopped
+
+networks:
+  zabbix-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+          ip_range: 172.21.240.240/28
