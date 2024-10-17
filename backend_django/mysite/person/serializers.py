@@ -18,6 +18,11 @@ class UserRegistrationSerializer(BaseUserRegistrationSerializer):
         )
         read_only_fields = ('username', 'email')
 
+    def validate_email(self, value):
+        if Person.objects.filter(email=value).exists():
+            raise serializers.ValidationError("Email уже зарегистрирован.")
+        return value
+
 class ManagerSerializer(serializers.ModelSerializer):
     """
     Сериализатор для модели Manager.

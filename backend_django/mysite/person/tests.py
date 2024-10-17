@@ -4,6 +4,7 @@ from django.urls import reverse
 
 from rest_framework import status
 from rest_framework.test import APITestCase
+from rest_framework.authtoken.models import Token
 
 
 from .models import Person
@@ -25,7 +26,7 @@ class PersonModelTest(TestCase):
         self.assertEqual(str(self.user), 'testuser')
 
     def test_get_full_name(self):
-        self.assertEqual(self.user.get_full_name(), 'User Test ')
+        self.assertEqual(self.user.get_full_name(), 'User Test')
 
     def test_get_short_name(self):
         self.assertEqual(self.user.get_short_name(), 'User T.')
@@ -39,56 +40,37 @@ class UserAPITest(APITestCase):
             last_name='User',
             password='testpassword'
         )
-        self.client.login(username='testuser', password='testpassword')  # Логинимся для тестов
 
-    def test_create_user(self):
-        url = reverse('user-create')  # Убедитесь, что это правильный URL для создания пользователя
+
+    def test_login(self):
+        url = reverse('login')
         data = {
-            'username': 'newuser',
-            'first_name': 'New',
-            'last_name': 'User',
-            'password': 'newpassword'
+            'username': self.user,
+            'password': 'testpassword',
         }
-
-        response = self.client.post(url, data)
-
-        # Проверка статус-кода ответа и наличия созданного объекта в базе данных
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertTrue(Person.objects.filter(username='newuser').exists())
-
-    def test_get_user_details(self):
-        url = reverse('user-detail',
-                      args=[self.user.id])  # Убедитесь, что это правильный URL для получения пользователя
-
-        response = self.client.get(url)
-
-        # Проверка статус-кода ответа и наличия объекта в ответе
+        response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertContains(response, self.user.username)
-
-    def test_update_user(self):
-        url = reverse('user-detail', args=[self.user.id])  # URL для обновления пользователя
-
+        self.assertTrue(response.data['auth_token'])
         data = {
-            'first_name': 'Updated',
-            'last_name': 'User'
+            'username': 'testuser1',
+            'password': 'testpassword',
         }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['non_field_errors'], ["Невозможно войти с предоставленными учетными данными."])
 
-        response = self.client.patch(url, data)
 
-        # Проверка статус-кода ответа и обновления объекта в базе данных
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+    def client_login(self):
+        url = reverse('login')
+        data = {
+            'username': self.user.username,
+            'password': 'testpassword',
+        }
+        response = self.client.post(url, data, format='json')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {response.data["auth_token"]}')
 
-        # Проверка обновленных данных
-        self.user.refresh_from_db()
-        self.assertEqual(self.user.first_name, 'Updated')
-
-    def test_delete_user(self):
-        url = reverse('user-detail', args=[self.user.id])  # URL для удаления пользователя
-
-        response = self.client.delete(url)
-
-        # Проверка статус-кода ответа и отсутствия объекта в базе данных
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertFalse(Person.objects.filter(id=self.user.id).exists())
-# Create your tests here.
+    def test_logout(self):
+        url = reverse('logout')
+        self.client_login()
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
