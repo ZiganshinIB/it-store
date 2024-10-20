@@ -1,3 +1,4 @@
+from django.contrib.auth.decorators import permission_required
 from django.db.models import Q
 from drf_spectacular.utils import extend_schema_view, extend_schema
 from rest_framework import viewsets, views, generics, mixins, status
@@ -10,10 +11,23 @@ from .models import ApprovalRoute, ApproveStep
 from .models import RequestTemplate, RequestTaskRelation, TaskTemplate
 from .models import Request, Task, Approve, Comment
 
-from .serializers import ApprovalRouteSerializer, ApproveStepSerializer
-from .serializers import RequestTemplateSerializer, RequestTaskRelationSerializer, TaskTemplateSerializer
-from .serializers import TaskSerializer
-from .serializers import CreateRequestSerializer, ListRequestSerializer, AppointRequestSerializer
+from .serializers import (
+    ListApprovalRouteSerializer,
+    DetailApprovalRouteSerializer,
+    UpdateApprovalRouteSerializer,
+    TaskTemplateSerializer,
+    RequestTaskRelationSerializer,
+    ListRequestTemplateSerializer,
+    DetailRequestTemplateSerializer,
+    UpdateRequestTemplateSerializer,
+    TaskSerializer,
+    ApproveSerializer,
+    CommentSerializer,
+    CreateRequestSerializer,
+    ListRequestSerializer,
+    DetailRequestSerializer,
+    AppointRequestSerializer
+)
 
 from .permissions import ListRequestPermission, DetailRequestPermission, CanselRequestPermission, \
     AppointRequestPermission
@@ -24,33 +38,64 @@ from .permissions import ListRequestPermission, DetailRequestPermission, CanselR
             summary="Получить список Маршрутов согласования",
             description="Используя эту комманду вы можете получить список Маршрутов согласования",
             responses={
-                200: ApprovalRouteSerializer(many=True),
+                200: ListApprovalRouteSerializer(many=True),
                 403: DummyDetailAndStatusSerializer
             },
         ),
-    update=extend_schema(
-        summary="Пока в работе",
+    update = extend_schema(
+        summary="Обновление Маршрута согласования",
+        description="Используя эту комманду вы можете обновить Маршрут согласования",
+        request=UpdateApprovalRouteSerializer,
 
     ),
+    retrieve=extend_schema(
+        summary="Показывает конкретный Маршрут согласования",
+        description="Используя эту комманду вы можете показать конкретный Маршрут согласования",
+        responses={
+            200: DetailApprovalRouteSerializer(many=True),
+            403: DummyDetailAndStatusSerializer
+        },
+    ),
     partial_update=extend_schema(
-        summary="Пока в работе",
+        summary="Частичное обновление Маршрута согласования",
+        description="Используя эту комманду вы можете частично обновить Маршрут согласования",
+        request=UpdateApprovalRouteSerializer,
     ),
     create=extend_schema(
             summary="Создание нового Маршрута согласования",
             description="Создается маршрут согласования с шагами.",
             responses={
-                201: ApprovalRouteSerializer(many=True),
+                201: DetailApprovalRouteSerializer(many=True),
                 403: DummyDetailAndStatusSerializer,
                 400: DummyDetailSerializer
             },
-            request=ApprovalRouteSerializer(many=True),
+            request=DetailApprovalRouteSerializer(many=True),
 
         ),
 )
-class ApprovalRouteViewSet(viewsets.ModelViewSet):
+class ApprovalRouteViewSet(mixins.CreateModelMixin,
+                           mixins.RetrieveModelMixin,
+                           mixins.DestroyModelMixin,
+                           mixins.ListModelMixin,
+                           mixins.UpdateModelMixin,
+                           GenericViewSet):
     queryset = ApprovalRoute.objects.all()
-    serializer_class = ApprovalRouteSerializer
+    serializer_class = ListApprovalRouteSerializer
     permission_classes = [DjangoModelPermissions]
+
+    def get_serializer_class(self):
+        """
+        Возвращает сериализатор для конкретного действия
+        :return:
+        """
+        if self.action == 'create':
+            return DetailApprovalRouteSerializer
+        if self.action == 'update' or self.action == 'partial_update':
+            return UpdateApprovalRouteSerializer
+        return super().get_serializer_class()
+
+    def get_permissions(self):
+        return super().get_permissions()
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -70,23 +115,34 @@ class ApprovalRouteViewSet(viewsets.ModelViewSet):
     create=extend_schema(
         summary="Создание шаблона заявки",
     ),
-    partial_update=extend_schema(
-        summary="Пока в работе",
-    ),
-    update=extend_schema(
-        summary="Пока в работе",
-    ),
-    destroy=extend_schema(
-        summary="Пока в работе",
-    ),
     retrieve=extend_schema(
-        summary="Пока в работе",
+        summary="Получить детальную информацию о шаблонной заявке",
+        description="Используя эту комманду вы можете получить детальную информацию о шаблонной заявке",
+        request=DetailRequestTemplateSerializer,
+        responses={
+            200: DetailRequestTemplateSerializer,
+            403: DummyDetailAndStatusSerializer
+        },
     ),
 )
-class RequestTemplateViewSet(viewsets.ModelViewSet):
+class RequestTemplateViewSet(
+    mixins.CreateModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.DestroyModelMixin,
+    mixins.ListModelMixin,
+    GenericViewSet
+):
     queryset = RequestTemplate.objects.all()
-    serializer_class = RequestTemplateSerializer
+    serializer_class = ListRequestTemplateSerializer
     permission_classes = [DjangoModelPermissions]
+
+    def get_permissions(self):
+        return super().get_permissions()
+
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return DetailRequestTemplateSerializer
+        return super().get_serializer_class()
 
 
 @extend_schema_view(
