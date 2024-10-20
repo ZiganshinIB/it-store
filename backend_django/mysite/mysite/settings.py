@@ -1,7 +1,7 @@
 from pathlib import Path
 import os
 from pathlib import Path
-
+from .permissions import IsSuperUser
 import dj_database_url
 from django.conf.global_settings import AUTH_USER_MODEL
 from environs import Env
@@ -107,12 +107,18 @@ REST_FRAMEWORK = {
 
 }
 DJOSER = {
+    'SEND_ACTIVATION_EMAIL': False,
+    'PASSWORD_RESET_CONFIRM_URL': False,
+    'USERNAME_RESET_CONFIRM_URL': False,
+    'SEND_CONFIRMATION_EMAIL': False,
     'SERIALIZERS': {
         'user_create': 'person.serializers.UserRegistrationSerializer',
         'user': 'person.serializers.PersonSerializer',
+
     },
     'PERMISSIONS':{
         'user_create': ['rest_framework.permissions.DjangoModelPermissions'],
+        'user_delete': [IsSuperUser],
         # For activation
         # 'activation': ['rest_framework.permissions.DjangoModelPermissions'],
         # For resend_activation and reset_password
