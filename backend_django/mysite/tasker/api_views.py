@@ -35,9 +35,6 @@ from .serializers import (
     AppointRequestSerializer, CreateRequestTemplateSerializer, AppendTaskTemplateSerializer
 )
 
-from .permissions import ListRequestPermission, DetailRequestPermission, CanselRequestPermission, \
-    AppointRequestPermission
-
 
 @extend_schema_view(
     list=extend_schema(
@@ -191,13 +188,7 @@ class TaskTemplateViewSet(viewsets.ModelViewSet):
             403: DummyDetailAndStatusSerializer
         },
 
-    ),
-    clean_tasks=extend_schema(
-        summary="Очистить шаблонные задачи",
-        description="Это комманда очистит все связанные шаблонные задачи из шаблона заявок",
-
-)
-
+    )
 )
 class RequestTemplateViewSet(
     mixins.CreateModelMixin,
@@ -225,27 +216,6 @@ class RequestTemplateViewSet(
             return AppendTaskTemplateSerializer
         return super().get_serializer_class()
 
-    @action(methods=['delete'], detail=True)
-    def clean_tasks(self, request, pk=None):
-        """
-        Удаляет все связи с Шаблонами задач
-        Результат: self.tasks == []
-        """
-        instance = self.get_object()
-        instance.tasks.clear()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-    @action(methods=['put'], detail=True)
-    def add_task(self, request, pk=None):
-        """
-        Добавляет шаблон задачи в список шаблонов задач
-        """
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data)
-        serializer.is_valid(raise_exception=True)
-        response = DetailRequestTemplateSerializer(instance=serializer.instance)
-        return Response(response.data, status=status.HTTP_201_CREATED, headers=headers)
-
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -258,35 +228,32 @@ class RequestTemplateViewSet(
     def perform_create(self, serializer):
         serializer.save()
 
-    def update(self, request, *args, **kwargs):
-        partial = kwargs.pop('partial', False)
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
-        serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
-
-        if getattr(instance, '_prefetched_objects_cache', None):
-            # If 'prefetch_related' has been applied to a queryset, we need to
-            # forcibly invalidate the prefetch cache on the instance.
-            instance._prefetched_objects_cache = {}
-
-        return Response(serializer.data)
-
-    def perform_update(self, serializer):
-        serializer.save()
-
-    def partial_update(self, request, *args, **kwargs):
-        kwargs['partial'] = True
-        return self.update(request, *args, **kwargs)
-
-
-
-
-
+@extend_schema_view(
+    list=extend_schema(
+        summary="Получить список задач",
+        description="Используя эту комманду вы можете получить список задач",
+        responses={
+            200: TaskSerializer,
+        }
+    )
+)
 class TaskViewSet(viewsets.ModelViewSet):
     queryset = Task.objects.all()
     serializer_class = TaskSerializer
     permission_classes = [DjangoModelPermissions]
+
+    def get_permissions(self):
+        return super().get_permissions()
+
+    def get_queryset(self):
+        user = self.request.user
+        if self.request.user.is_superuser or self.request.user.has_perm('tasker.view_task'):
+            return self.queryset
+        queryset = self.queryset.filter(
+            (
+                    Q(author=user) | Q(executor=user) | Q(group__in=user.groups.all()))
+        ).distinct()
+        return queryset
 
 class CreateRequestView(generics.CreateAPIView):
     serializer_class = CreateRequestSerializer
@@ -296,88 +263,88 @@ class CreateRequestView(generics.CreateAPIView):
         serializer.save(author=self.request.user)
 
 
-class ListRequestView(generics.ListAPIView):
-    serializer_class = ListRequestSerializer
-    permission_classes = [ListRequestPermission]
-    queryset = Request.objects.all()
-
-
-    def get_queryset(self):
-        user = self.request.user
-        if user.is_superuser or user.has_perm('tasker.view_request'):
-            return self.queryset
-        else:
-            response = self.queryset((Q(group__in=user.groups.all()) | Q(author=user) | Q(executor=user)).distinct())
-            return response
-
-
-class DetailRequestView(generics.RetrieveAPIView):
-    queryset = Request.objects.all()
-    serializer_class = ListRequestSerializer
-    permission_classes = [DetailRequestPermission]
-
-
-@extend_schema_view(
-    get=extend_schema(
-        summary="Отмена заявки",
-        description="Используя эту комманду автор заявки можете отменить заявку",
-        responses={
-            200: ListRequestSerializer,
-            400: DummyDetailAndStatusSerializer
-        },
-    )
-)
-class CanselRequestView(generics.RetrieveAPIView):
-    queryset = Request.objects.all()
-    serializer_class = ListRequestSerializer
-    permission_classes = [DetailRequestPermission]
-
-    def retrieve(self, request, *args, **kwargs):
-        instance = self.get_object()
-        if instance.status in ['aprv', 'new', 'prg']:
-            instance.status = 'cans'
-            instance.save()
-        elif instance.status == 'chk':
-            instance.status = 'end'
-            instance.save()
-        else:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
-        serializer = self.get_serializer(instance)
-        return Response(serializer.data)
-
-
-@extend_schema_view(
-    put=extend_schema(
-        summary="Назначить заявке исполнителя",
-        description="Используя эту можно назначить заявке исполнителя",
-        responses={
-            200: AppointRequestSerializer,
-            403: DummyDetailAndStatusSerializer
-        },
-    ),
-    patch=extend_schema(
-        summary="Назначить заявке исполнителя",
-        description="Используя эту можно назначить заявке исполнителя",
-        responses={
-            200: AppointRequestSerializer,
-            403: DummyDetailAndStatusSerializer
-        },
-    ),
-)
-class AppointRequestView(generics.UpdateAPIView):
-    queryset = Request.objects.all()
-    serializer_class = AppointRequestSerializer
-    permission_classes = [AppointRequestPermission]
-
-    def update(self, request, *args, **kwargs):
-        partial = kwargs.pop('partial', False)
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
-        serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
-
-        if getattr(instance, '_prefetched_objects_cache', None):
-            instance._prefetched_objects_cache = {}
-
-        return Response(serializer.data)
+# class ListRequestView(generics.ListAPIView):
+#     serializer_class = ListRequestSerializer
+#     permission_classes = [ListRequestPermission]
+#     queryset = Request.objects.all()
+#
+#
+#     def get_queryset(self):
+#         user = self.request.user
+#         if user.is_superuser or user.has_perm('tasker.view_request'):
+#             return self.queryset
+#         else:
+#             response = self.queryset((Q(group__in=user.groups.all()) | Q(author=user) | Q(executor=user)).distinct())
+#             return response
+#
+#
+# class DetailRequestView(generics.RetrieveAPIView):
+#     queryset = Request.objects.all()
+#     serializer_class = ListRequestSerializer
+#     permission_classes = [DetailRequestPermission]
+#
+#
+# @extend_schema_view(
+#     get=extend_schema(
+#         summary="Отмена заявки",
+#         description="Используя эту комманду автор заявки можете отменить заявку",
+#         responses={
+#             200: ListRequestSerializer,
+#             400: DummyDetailAndStatusSerializer
+#         },
+#     )
+# )
+# class CanselRequestView(generics.RetrieveAPIView):
+#     queryset = Request.objects.all()
+#     serializer_class = ListRequestSerializer
+#     permission_classes = [DetailRequestPermission]
+#
+#     def retrieve(self, request, *args, **kwargs):
+#         instance = self.get_object()
+#         if instance.status in ['aprv', 'new', 'prg']:
+#             instance.status = 'cans'
+#             instance.save()
+#         elif instance.status == 'chk':
+#             instance.status = 'end'
+#             instance.save()
+#         else:
+#             return Response(status=status.HTTP_400_BAD_REQUEST)
+#         serializer = self.get_serializer(instance)
+#         return Response(serializer.data)
+#
+#
+# @extend_schema_view(
+#     put=extend_schema(
+#         summary="Назначить заявке исполнителя",
+#         description="Используя эту можно назначить заявке исполнителя",
+#         responses={
+#             200: AppointRequestSerializer,
+#             403: DummyDetailAndStatusSerializer
+#         },
+#     ),
+#     patch=extend_schema(
+#         summary="Назначить заявке исполнителя",
+#         description="Используя эту можно назначить заявке исполнителя",
+#         responses={
+#             200: AppointRequestSerializer,
+#             403: DummyDetailAndStatusSerializer
+#         },
+#     ),
+# )
+# class AppointRequestView(generics.UpdateAPIView):
+#     queryset = Request.objects.all()
+#     serializer_class = AppointRequestSerializer
+#     permission_classes = [AppointRequestPermission]
+#
+#     def update(self, request, *args, **kwargs):
+#         partial = kwargs.pop('partial', False)
+#         instance = self.get_object()
+#         serializer = self.get_serializer(instance, data=request.data, partial=partial)
+#         serializer.is_valid(raise_exception=True)
+#         self.perform_update(serializer)
+#
+#         if getattr(instance, '_prefetched_objects_cache', None):
+#             instance._prefetched_objects_cache = {}
+#
+#         return Response(serializer.data)
 

@@ -155,9 +155,6 @@ class Request(models.Model):
 
 
 class Task(models.Model):
-    """
-    Задача
-    """
     STATUS = (
         ('new','Новый'),
         ('prg' ,'В работе'),
@@ -176,8 +173,8 @@ class Task(models.Model):
     executor = models.ForeignKey(UserModel, on_delete=models.SET_NULL, null=True, verbose_name='Исполнитель')
     status = models.CharField(max_length=10, choices=STATUS, verbose_name='Статус', default='new')
     group = models.ForeignKey(Group, on_delete=models.SET_NULL, null=True, blank=True, default=None, verbose_name='Группа')
-    task_template = models.ForeignKey(TaskTemplate, on_delete=models.SET_NULL, null=True, verbose_name='Тип')
-    on_request = models.ForeignKey(Request, on_delete=models.SET_NULL, null=True, verbose_name='Заявка', related_name='tasks')
+    task_template = models.ForeignKey(TaskTemplate, on_delete=models.SET_NULL, null=True, blank=True, default=None, verbose_name='Тип')
+    on_request = models.ForeignKey(Request, on_delete=models.SET_NULL, null=True, blank=True, default=None, verbose_name='Заявка', related_name='tasks')
 
     comments = GenericRelation('Comment', related_query_name='task')
 

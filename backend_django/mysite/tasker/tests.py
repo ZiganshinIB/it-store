@@ -4,6 +4,7 @@ from django.contrib.auth.models import Group, Permission
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -11,7 +12,8 @@ from rest_framework.test import APITestCase
 from .models import (
     ApprovalRoute,
     ApproveStep,
-    TaskTemplate
+    TaskTemplate,
+    Task
 )
 
 from .serializers import (
@@ -248,6 +250,151 @@ class TaskTemplateAPITest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
 
+class TaskAPITest(APITestCase):
+    def setUp(self):
+        self.group_admin = Group.objects.create(name='admin')
+        self.group_admin.permissions.add(Permission.objects.get(codename='add_task'))
+        self.group_admin.permissions.add(Permission.objects.get(codename='view_task'))
+        self.group_admin.permissions.add(Permission.objects.get(codename='change_task'))
+        self.group_admin.permissions.add(Permission.objects.get(codename='delete_task'))
+        self.group_it = Group.objects.create(name='it')
+        self.group_programmer = Group.objects.create(name='programmer')
+        self.user_author1 = User.objects.create_user(
+            username='testuser1',
+            first_name='Test1',
+            last_name='User',
+            password='testpassword'
+        )
+        self.user_author2 = User.objects.create_user(
+            username='testuser2',
+            first_name='Test2',
+            last_name='User',
+            password='testpassword'
+        )
+        self.user_executor1 = User.objects.create_user(
+            username='testuser3',
+            first_name='Test3',
+            last_name='User',
+            password='testpassword'
+        )
+        self.user_executor2 = User.objects.create_user(
+            username='testuser4',
+            first_name='Test4',
+            last_name='User',
+            password='testpassword'
+        )
+        self.user_it1 = User.objects.create_user(
+            username='testuser5',
+            first_name='Test5',
+            last_name='User',
+            password='testpassword'
+        )
+        self.user_it2 = User.objects.create_user(
+            username='testuser6',
+            first_name='Test6',
+            last_name='User',
+            password='testpassword'
+        )
+        self.user_it1.groups.add(self.group_it)
+        self.user_it2.groups.add(self.group_it)
+        self.user_programmer1 = User.objects.create_user(
+            username='testuser7',
+            first_name='Test7',
+            last_name='User',
+            password='testpassword'
+        )
+        self.user_programmer2 = User.objects.create_user(
+            username='testuser8',
+            first_name='Test8',
+            last_name='User',
+            password='testpassword'
+        )
+        self.user_programmer1.groups.add(self.group_programmer)
+        self.user_programmer2.groups.add(self.group_programmer)
+
+        self.admin = User.objects.create_user(
+            username='admin',
+            first_name='admin',
+            last_name='User',
+            password='testpassword'
+        )
+        self.admin.groups.add(self.group_admin)
+
+        # create tasks
+        Task.objects.create(
+            title='task1',
+            description='test',
+            dedlin_date=timezone.now(),
+            author=self.user_author1,
+            executor=self.user_executor1,
+            group=self.group_it
+        )
+        Task.objects.create(
+            title='task2',
+            description='test',
+            dedlin_date=timezone.now(),
+            author=self.user_author2,
+            executor=self.user_executor1,
+            group=self.group_it
+        )
+        Task.objects.create(
+            title='task3',
+            description='test',
+            dedlin_date=timezone.now(),
+            author=self.user_author1,
+            executor=self.user_executor2,
+            group=self.group_programmer
+        )
+        Task.objects.create(
+            title='task4',
+            description='test',
+            dedlin_date=timezone.now(),
+            author=self.user_author2,
+            executor=self.user_executor2,
+            group=self.group_programmer
+        )
+
+    def client_login(self, username='testuser1', password='testpassword'):
+        url = reverse('login')
+        data = {
+            'username': username,
+            'password': password,
+        }
+        response = self.client.post(url, data, format='json')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {response.data["auth_token"]}')
+
+    def test_get_tasks_author(self):
+        self.client_login(self.user_author1.username, 'testpassword')
+        url = reverse('api_tasker:task-list')
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+        self.client_login(self.user_author2.username, 'testpassword')
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+
+    def test_get_tasks_executor(self):
+        self.client_login(self.user_executor1.username, 'testpassword')
+        url = reverse('api_tasker:task-list')
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+        self.client_login(self.user_executor2.username, 'testpassword')
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+
+    def test_get_tasks_group(self):
+        self.client_login(self.user_it1.username, 'testpassword')
+        url = reverse('api_tasker:task-list')
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+        self.client_login(self.user_it2.username, 'testpassword')
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
 
 
 
