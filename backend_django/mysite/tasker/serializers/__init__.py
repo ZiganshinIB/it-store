@@ -13,7 +13,9 @@ from .RequestTaskRelation import (
 from .RequestTemplate import (
     ListRequestTemplateSerializer,
     DetailRequestTemplateSerializer,
-    UpdateRequestTemplateSerializer
+    UpdateRequestTemplateSerializer,
+    CreateRequestTemplateSerializer,
+    AppendTaskTemplateSerializer,
 )
 from .Task import (
     TaskSerializer
@@ -42,6 +44,8 @@ __all__ = [
     'ListRequestTemplateSerializer',
     'DetailRequestTemplateSerializer',
     'UpdateRequestTemplateSerializer',
+    'CreateRequestTemplateSerializer',
+    'AppendTaskTemplateSerializer',
     'TaskSerializer',
     'ApproveSerializer',
     'CommentSerializer',

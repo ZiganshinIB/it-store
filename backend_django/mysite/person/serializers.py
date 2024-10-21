@@ -14,9 +14,8 @@ class UserRegistrationSerializer(BaseUserRegistrationSerializer):
             'birthday',
             'password',
             'email',
-            'manager'
         )
-        read_only_fields = ('username', 'email')
+        read_only_fields = ('id', 'username', 'email')
 
     def validate_email(self, value):
         if Person.objects.filter(email=value).exists():
@@ -25,7 +24,7 @@ class UserRegistrationSerializer(BaseUserRegistrationSerializer):
 
 class ManagerSerializer(serializers.ModelSerializer):
     """
-    Сериализатор для модели Manager.
+    Сериализатор для модели Person (Руководитель).
     """
     class Meta:
         model = Person
@@ -39,6 +38,7 @@ class PersonSerializer(BaseUserSerializer):
     class Meta(BaseUserSerializer.Meta):
         model = Person
         fields = (
+            'id',
             'username',
             'phone_number',
             'first_name',
@@ -48,7 +48,9 @@ class PersonSerializer(BaseUserSerializer):
             'email',
             'manager'
         )
-        read_only_fields = ('username', 'email')
+        read_only_fields = ('id','username', 'email')
+
+
 
 
 class DummyDetailSerializer(serializers.Serializer):
