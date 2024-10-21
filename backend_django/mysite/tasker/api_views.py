@@ -5,6 +5,8 @@ from rest_framework import viewsets, views, generics, mixins, status
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 from rest_framework.permissions import IsAuthenticated, DjangoModelPermissions
+
+from mysite.permissions import AdvanceDjangoModelPermissions
 from person.serializers import DummyDetailSerializer, DummyDetailAndStatusSerializer
 
 from .models import ApprovalRoute, ApproveStep
@@ -46,7 +48,6 @@ from .permissions import ListRequestPermission, DetailRequestPermission, CanselR
         summary="Обновление Маршрута согласования",
         description="Используя эту комманду вы можете обновить Маршрут согласования",
         request=UpdateApprovalRouteSerializer,
-
     ),
     retrieve=extend_schema(
         summary="Показывает конкретный Маршрут согласования",
@@ -70,7 +71,6 @@ from .permissions import ListRequestPermission, DetailRequestPermission, CanselR
                 400: DummyDetailSerializer
             },
             request=DetailApprovalRouteSerializer(many=True),
-
         ),
 )
 class ApprovalRouteViewSet(mixins.CreateModelMixin,
@@ -81,7 +81,7 @@ class ApprovalRouteViewSet(mixins.CreateModelMixin,
                            GenericViewSet):
     queryset = ApprovalRoute.objects.all()
     serializer_class = ListApprovalRouteSerializer
-    permission_classes = [DjangoModelPermissions]
+    permission_classes = [AdvanceDjangoModelPermissions]
 
     def get_serializer_class(self):
         """
@@ -96,13 +96,6 @@ class ApprovalRouteViewSet(mixins.CreateModelMixin,
 
     def get_permissions(self):
         return super().get_permissions()
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
@@ -134,7 +127,7 @@ class RequestTemplateViewSet(
 ):
     queryset = RequestTemplate.objects.all()
     serializer_class = ListRequestTemplateSerializer
-    permission_classes = [DjangoModelPermissions]
+    permission_classes = [AdvanceDjangoModelPermissions]
 
     def get_permissions(self):
         return super().get_permissions()
@@ -168,7 +161,7 @@ class RequestTemplateViewSet(
 class TaskTemplateViewSet(viewsets.ModelViewSet):
     queryset = TaskTemplate.objects.all()
     serializer_class = TaskTemplateSerializer
-    permission_classes = [DjangoModelPermissions]
+    permission_classes = [AdvanceDjangoModelPermissions]
 
 
 # TODO: Переделать

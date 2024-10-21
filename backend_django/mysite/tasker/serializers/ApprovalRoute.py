@@ -7,13 +7,20 @@ class ApproveStepSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = ApproveStep
-        fields = ['title', 'approval_type', 'specific_approver', 'group_approver', 'dedlin']
+        fields = [
+            'title',
+            'order_number',
+            'approval_type',
+            'specific_approver',
+            'group_approver',
+            'dedlin'
+        ]
         read_only_fields = ['order_number', 'route']
 
     def validate(self, data):
-        if data['approval_type'] == 'group' and not data['group_approver']:
+        if data['approval_type'] == 'group' and not data.get('group_approver'):
             raise serializers.ValidationError("Укажите группу")
-        if data['approval_type'] == 'specific' and not data['specific_approver']:
+        if data['approval_type'] == 'specific' and not data.get('specific_approver'):
             raise serializers.ValidationError("Укажите согласователя")
         return data
 
@@ -31,11 +38,11 @@ class DetailApprovalRouteSerializer(serializers.ModelSerializer):
     """
     Детальная сериализация маршрута согласования
     """
-    steps = ApproveStepSerializer(many=True)
+    steps = ApproveStepSerializer(many=True, required=False)
     class Meta:
         model = ApprovalRoute
-        fields = ['id', 'title', 'description', 'author', 'steps']
-        readline_only_fields = ['id', 'author']
+        fields = ['id', 'title', 'description', 'author', 'steps', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'author', 'created_at', 'updated_at']
 
 
     def create(self, validated_data):
@@ -44,10 +51,14 @@ class DetailApprovalRouteSerializer(serializers.ModelSerializer):
         :param validated_data: Данные для создания маршрута согласования
         :return:
         """
-        steps_data = validated_data.pop('steps')
-        approval_route = ApprovalRoute.objects.create(**validated_data)
-        for i, step_data in enumerate(steps_data):
-            ApproveStep.objects.create(order_number=i+1, route=approval_route, **step_data)
+
+        if 'steps' in validated_data:
+            steps_data = validated_data.pop('steps')
+            approval_route = ApprovalRoute.objects.create(**validated_data)
+            for i, step_data in enumerate(steps_data):
+                ApproveStep.objects.create(order_number=i+1, route=approval_route, **step_data)
+        else:
+            approval_route = ApprovalRoute.objects.create(**validated_data)
         return approval_route
 
 

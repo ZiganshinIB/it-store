@@ -5,18 +5,18 @@ from ..models import TaskTemplate
 class TaskTemplateSerializer(serializers.ModelSerializer):
     class Meta:
         model = TaskTemplate
-        fields = ['id', 'title', 'description', 'dedline', 'complexity']
+        fields = ['id', 'title', 'description','group', 'dedline', 'complexity']
         read_only_fields = ['id']
 
 class ListTaskTemplateSerializer(serializers.ModelSerializer):
     class Meta:
         model = TaskTemplate
-        fields = ['id', 'title', 'description', 'dedline', 'complexity']
+        fields = ['id', 'title', 'description', 'group', 'dedline', 'complexity']
         read_only_fields = ['id']
 
 
 class DetailTaskTemplateSerializer(serializers.ModelSerializer):
     class Meta:
         model = TaskTemplate
-        fields = ['id', 'title', 'description', 'dedline', 'complexity']
+        fields = ['id', 'title', 'description', 'group', 'dedline', 'complexity']
         read_only_fields = ['id']
