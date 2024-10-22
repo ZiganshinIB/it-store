@@ -1,3 +1,4 @@
+import json
 from distutils.log import fatal
 
 from django.contrib.auth.models import Group, Permission
@@ -321,7 +322,8 @@ class TaskAPITest(APITestCase):
         self.admin.groups.add(self.group_admin)
 
         # create tasks
-        Task.objects.create(
+        self.tasks = []
+        task = Task.objects.create(
             title='task1',
             description='test',
             dedlin_date=timezone.now(),
@@ -329,7 +331,8 @@ class TaskAPITest(APITestCase):
             executor=self.user_executor1,
             group=self.group_it
         )
-        Task.objects.create(
+        self.tasks.append(task)
+        task = Task.objects.create(
             title='task2',
             description='test',
             dedlin_date=timezone.now(),
@@ -337,7 +340,8 @@ class TaskAPITest(APITestCase):
             executor=self.user_executor1,
             group=self.group_it
         )
-        Task.objects.create(
+        self.tasks.append(task)
+        task = Task.objects.create(
             title='task3',
             description='test',
             dedlin_date=timezone.now(),
@@ -345,7 +349,8 @@ class TaskAPITest(APITestCase):
             executor=self.user_executor2,
             group=self.group_programmer
         )
-        Task.objects.create(
+        self.tasks.append(task)
+        task = Task.objects.create(
             title='task4',
             description='test',
             dedlin_date=timezone.now(),
@@ -353,6 +358,8 @@ class TaskAPITest(APITestCase):
             executor=self.user_executor2,
             group=self.group_programmer
         )
+        self.tasks.append(task)
+
 
     def client_login(self, username='testuser1', password='testpassword'):
         url = reverse('login')
@@ -380,6 +387,7 @@ class TaskAPITest(APITestCase):
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 2)
+        self.assertIn(response.data[0]['title'], ['task1', 'task2'])
         self.client_login(self.user_executor2.username, 'testpassword')
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -395,6 +403,17 @@ class TaskAPITest(APITestCase):
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 2)
+
+    def test_task_cansel(self):
+        self.client_login(self.user_author1.username, 'testpassword')
+        url = reverse('api_tasker:task-cansel')
+        response = self.client.get(url, format='json')
+        print(json.dumps(response.data, indent=4, default=str, ensure_ascii=False))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['status'], Task.CANCEL)
+        print(response.data.comments)
+
+
 
 
 

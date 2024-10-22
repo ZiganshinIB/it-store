@@ -18,7 +18,8 @@ from .RequestTemplate import (
     AppendTaskTemplateSerializer,
 )
 from .Task import (
-    TaskSerializer
+    TaskSerializer,
+    DetailTaskSerializer
 )
 from .Approve import (
     ApproveSerializer
@@ -47,6 +48,7 @@ __all__ = [
     'CreateRequestTemplateSerializer',
     'AppendTaskTemplateSerializer',
     'TaskSerializer',
+    'DetailTaskSerializer',
     'ApproveSerializer',
     'CommentSerializer',
     'CreateRequestSerializer',

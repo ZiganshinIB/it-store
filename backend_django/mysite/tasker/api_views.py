@@ -1,8 +1,10 @@
+
 from http.client import responses
 from trace import Trace
 
 from django.contrib.auth.decorators import permission_required
 from django.db.models import Q
+from django.utils import timezone
 from drf_spectacular.utils import extend_schema_view, extend_schema
 from rest_framework import viewsets, views, generics, mixins, status
 from rest_framework.decorators import action
@@ -10,7 +12,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 from rest_framework.permissions import IsAuthenticated, DjangoModelPermissions
 
-from mysite.permissions import AdvanceDjangoModelPermissions
+from mysite.permissions import AdvanceDjangoModelPermissions, IsAuthor
 from person.serializers import DummyDetailSerializer, DummyDetailAndStatusSerializer
 
 from .models import ApprovalRoute, ApproveStep
@@ -18,21 +20,20 @@ from .models import RequestTemplate, RequestTaskRelation, TaskTemplate
 from .models import Request, Task, Approve, Comment
 
 from .serializers import (
-    ListApprovalRouteSerializer,
-    DetailApprovalRouteSerializer,
-    UpdateApprovalRouteSerializer,
+    ListApprovalRouteSerializer, DetailApprovalRouteSerializer, UpdateApprovalRouteSerializer,
     TaskTemplateSerializer,
     RequestTaskRelationSerializer,
-    ListRequestTemplateSerializer,
-    DetailRequestTemplateSerializer,
-    UpdateRequestTemplateSerializer,
-    TaskSerializer,
+    ListRequestTemplateSerializer, DetailRequestTemplateSerializer, UpdateRequestTemplateSerializer,
+    TaskSerializer, DetailTaskSerializer,
     ApproveSerializer,
     CommentSerializer,
     CreateRequestSerializer,
     ListRequestSerializer,
     DetailRequestSerializer,
-    AppointRequestSerializer, CreateRequestTemplateSerializer, AppendTaskTemplateSerializer
+    AppointRequestSerializer,
+    CreateRequestTemplateSerializer,
+    AppendTaskTemplateSerializer,
+
 )
 
 
@@ -216,7 +217,6 @@ class RequestTemplateViewSet(
             return AppendTaskTemplateSerializer
         return super().get_serializer_class()
 
-
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -235,6 +235,17 @@ class RequestTemplateViewSet(
         responses={
             200: TaskSerializer,
         }
+    ),
+    retrieve=extend_schema(
+        summary="Получить детальную информацию о задаче",
+        description="Используя эту комманду вы можете получить детальную информацию о задаче",
+        responses={
+            200: TaskSerializer
+        }
+    ),
+    create=extend_schema(
+        summary="Создание задачи",
+        description="Используя эту комманду вы можете создать задачу",
     )
 )
 class TaskViewSet(viewsets.ModelViewSet):
@@ -243,7 +254,14 @@ class TaskViewSet(viewsets.ModelViewSet):
     permission_classes = [DjangoModelPermissions]
 
     def get_permissions(self):
+        if self.action == 'cansel':
+            return [IsAuthor()]
         return super().get_permissions()
+
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return DetailTaskSerializer
+        return super().get_serializer_class()
 
     def get_queryset(self):
         user = self.request.user
@@ -254,6 +272,32 @@ class TaskViewSet(viewsets.ModelViewSet):
                     Q(author=user) | Q(executor=user) | Q(group__in=user.groups.all()))
         ).distinct()
         return queryset
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        response = DetailRequestTemplateSerializer(instance=serializer.instance)
+        return Response(response.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def perform_create(self, serializer):
+        serializer.save()
+
+    @action(["get"], detail=True)
+    def cansel(self, request, pk):
+        """
+        Комманда для отмены задачи
+        """
+        task = self.get_object()
+        task.status = Task.CANCEL
+        task.closed_at = timezone.now()
+        task.cansel_date = timezone.now()
+        task.comments.add(Comment(user=self.request.user, text="Задача отменена"))
+        task.save()
+        serializer = self.get_serializer(task)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 class CreateRequestView(generics.CreateAPIView):
     serializer_class = CreateRequestSerializer

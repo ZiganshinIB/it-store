@@ -188,6 +188,14 @@ class Task(models.Model):
         verbose_name = 'Задача'
         verbose_name_plural = 'Задачи'
 
+    def cansel(self):
+        """
+        Отмена задачи
+        """
+        self.status = 'cans'
+        self.cansel_date = timezone.now()
+        self.save()
+
 
 class Approve(models.Model):
     """
