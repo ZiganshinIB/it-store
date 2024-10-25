@@ -25,7 +25,7 @@ from .Approve import (
     ApproveSerializer
 )
 from .Comment import (
-    CommentSerializer
+    CommentSerializer,
 )
 from .Request import (
     CreateRequestSerializer,
@@ -33,7 +33,6 @@ from .Request import (
     DetailRequestSerializer,
     AppointRequestSerializer
 )
-
 
 
 __all__ = [

@@ -3,6 +3,7 @@ from http.client import responses
 from trace import Trace
 
 from django.contrib.auth.decorators import permission_required
+from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.template.defaultfilters import title
 from django.utils import timezone
@@ -23,18 +24,11 @@ from .models import Request, Task, Approve, Comment
 from .serializers import (
     ListApprovalRouteSerializer, DetailApprovalRouteSerializer, UpdateApprovalRouteSerializer,
     TaskTemplateSerializer,
-    RequestTaskRelationSerializer,
     ListRequestTemplateSerializer, DetailRequestTemplateSerializer, UpdateRequestTemplateSerializer,
     TaskSerializer, DetailTaskSerializer,
-    ApproveSerializer,
-    CommentSerializer,
     CreateRequestSerializer,
-    ListRequestSerializer,
-    DetailRequestSerializer,
-    AppointRequestSerializer,
     CreateRequestTemplateSerializer,
     AppendTaskTemplateSerializer,
-
 )
 
 
@@ -262,6 +256,8 @@ class TaskViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == 'retrieve':
             return DetailTaskSerializer
+        if self.action == 'cansel':
+            return DetailTaskSerializer
         return super().get_serializer_class()
 
     def get_queryset(self):
@@ -295,7 +291,8 @@ class TaskViewSet(viewsets.ModelViewSet):
         task.status = 'cans'
         task.closed_at = timezone.now()
         task.cansel_date = timezone.now()
-        task.comments.add(Comment(title='Отмена задачи',author=self.request.user, content="Задача отменена", ))
+        comment = Comment(content_object=task, title="Задача отменена", author=self.request.user, content="Задача отменена", )
+        comment.save()
         task.save()
         serializer = self.get_serializer(task)
         return Response(serializer.data, status=status.HTTP_200_OK)

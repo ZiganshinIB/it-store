@@ -260,58 +260,33 @@ class TaskAPITest(APITestCase):
         self.group_admin.permissions.add(Permission.objects.get(codename='delete_task'))
         self.group_it = Group.objects.create(name='it')
         self.group_programmer = Group.objects.create(name='programmer')
-        self.user_author1 = User.objects.create_user(
+        self.user_author = User.objects.create_user(
             username='testuser1',
             first_name='Test1',
             last_name='User',
             password='testpassword'
         )
-        self.user_author2 = User.objects.create_user(
-            username='testuser2',
-            first_name='Test2',
-            last_name='User',
-            password='testpassword'
-        )
-        self.user_executor1 = User.objects.create_user(
+        self.user_executor = User.objects.create_user(
             username='testuser3',
             first_name='Test3',
             last_name='User',
             password='testpassword'
         )
-        self.user_executor2 = User.objects.create_user(
-            username='testuser4',
-            first_name='Test4',
-            last_name='User',
-            password='testpassword'
-        )
-        self.user_it1 = User.objects.create_user(
+        self.user_it = User.objects.create_user(
             username='testuser5',
             first_name='Test5',
             last_name='User',
             password='testpassword'
         )
-        self.user_it2 = User.objects.create_user(
-            username='testuser6',
-            first_name='Test6',
-            last_name='User',
-            password='testpassword'
-        )
-        self.user_it1.groups.add(self.group_it)
-        self.user_it2.groups.add(self.group_it)
+        self.user_it.groups.add(self.group_it)
         self.user_programmer1 = User.objects.create_user(
             username='testuser7',
             first_name='Test7',
             last_name='User',
             password='testpassword'
         )
-        self.user_programmer2 = User.objects.create_user(
-            username='testuser8',
-            first_name='Test8',
-            last_name='User',
-            password='testpassword'
-        )
         self.user_programmer1.groups.add(self.group_programmer)
-        self.user_programmer2.groups.add(self.group_programmer)
+        self.user_programmпщer2.groups.add(self.group_programmer)
 
         self.admin = User.objects.create_user(
             username='admin',
@@ -408,11 +383,16 @@ class TaskAPITest(APITestCase):
         self.client_login(self.user_author1.username, 'testpassword')
         url = reverse('api_tasker:task-cansel', args=[self.tasks[0].id])
         response = self.client.get(url, format='json')
-        print(json.dumps(response.data, indent=4, default=str, ensure_ascii=False))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['status'], 'cans')
-        print(response.data.comments)
 
+    def test_task_cansel_error(self):
+        self.client_login(self.user_author2.username, 'testpassword')
+        url = reverse('api_tasker:task-cansel', args=[self.tasks[1].id])
+        response = self.client.get(url, format='json')
+        print(json.dumps(response.data, ensure_ascii=False, indent=4,))
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('Задача отменена', response.data['detail'])
 
 
 
