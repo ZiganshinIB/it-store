@@ -4,6 +4,7 @@ from trace import Trace
 
 from django.contrib.auth.decorators import permission_required
 from django.db.models import Q
+from django.template.defaultfilters import title
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema_view, extend_schema
 from rest_framework import viewsets, views, generics, mixins, status
@@ -289,11 +290,12 @@ class TaskViewSet(viewsets.ModelViewSet):
         """
         Комманда для отмены задачи
         """
+
         task = self.get_object()
-        task.status = Task.CANCEL
+        task.status = 'cans'
         task.closed_at = timezone.now()
         task.cansel_date = timezone.now()
-        task.comments.add(Comment(user=self.request.user, text="Задача отменена"))
+        task.comments.add(Comment(title='Отмена задачи',author=self.request.user, content="Задача отменена", ))
         task.save()
         serializer = self.get_serializer(task)
         return Response(serializer.data, status=status.HTTP_200_OK)

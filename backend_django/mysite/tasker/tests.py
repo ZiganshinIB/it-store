@@ -406,11 +406,11 @@ class TaskAPITest(APITestCase):
 
     def test_task_cansel(self):
         self.client_login(self.user_author1.username, 'testpassword')
-        url = reverse('api_tasker:task-cansel')
+        url = reverse('api_tasker:task-cansel', args=[self.tasks[0].id])
         response = self.client.get(url, format='json')
         print(json.dumps(response.data, indent=4, default=str, ensure_ascii=False))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['status'], Task.CANCEL)
+        self.assertEqual(response.data['status'], 'cans')
         print(response.data.comments)
 
 
