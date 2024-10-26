@@ -258,8 +258,6 @@ class TaskViewSet(viewsets.ModelViewSet):
             return DetailTaskSerializer
         if self.action == 'cansel':
             return DetailTaskSerializer
-        if self.action == 'comment':
-            return CreateCommentSerializer
         return super().get_serializer_class()
 
     def get_queryset(self):

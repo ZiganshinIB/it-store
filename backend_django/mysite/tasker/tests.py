@@ -390,6 +390,18 @@ class TaskAPITest(APITestCase):
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
+    def test_task_create(self):
+        self.client_login(self.user_it.username, 'testpassword')
+        url = reverse('api_tasker:task-list')
+        data = {
+            'title': 'test',
+            'description': 'test',
+            'dedlin_date': timezone.now(),
+            'executor': self.user_executor.id,
+            'group': self.group_it.id
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
 
 

@@ -167,7 +167,8 @@ class Task(models.Model):
     title = models.CharField(max_length=100, verbose_name='Заголовок')
     description = models.TextField(verbose_name='Описание', blank=True, null=True)
     closed_at = models.DateTimeField(blank=True, null=True, verbose_name='Дата закрытия')
-    dedlin_date = models.DateTimeField(verbose_name='Крайний срок выполнения')
+    dedlin_date = models.DateTimeField(verbose_name='Крайний срок выполнения', blank=True, null=True,
+                                       default=timezone.timedelta(days=3, hours=0, minutes=0))
     cansel_date = models.DateTimeField(blank=True, null=True, verbose_name="Дата завершение")
     author = models.ForeignKey(UserModel, on_delete=models.SET_NULL, null=True, verbose_name='Автор', related_name='task_author')
     executor = models.ForeignKey(UserModel, on_delete=models.SET_NULL, null=True, verbose_name='Исполнитель')
