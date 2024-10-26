@@ -330,6 +330,11 @@ class TaskAPITest(APITestCase):
             group=self.group_programmer
         )
 
+        self.tasktemplate = TaskTemplate.objects.create(
+            title='test',
+            description='test',
+        )
+
 
     def client_login(self, username='testuser1', password='testpassword'):
         url = reverse('login')
@@ -396,7 +401,6 @@ class TaskAPITest(APITestCase):
         data = {
             'title': 'test',
             'description': 'test',
-            'dedlin_date': timezone.now(),
             'executor': self.user_executor.id,
             'group': self.group_it.id
         }

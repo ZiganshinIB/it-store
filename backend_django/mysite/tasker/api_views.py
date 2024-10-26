@@ -25,7 +25,7 @@ from .serializers import (
     ListApprovalRouteSerializer, DetailApprovalRouteSerializer, UpdateApprovalRouteSerializer,
     TaskTemplateSerializer,
     ListRequestTemplateSerializer, DetailRequestTemplateSerializer, UpdateRequestTemplateSerializer,
-    TaskSerializer, DetailTaskSerializer,
+    TaskSerializer, DetailTaskSerializer, CreateTaskSerializer,
     CreateRequestSerializer,
     CreateRequestTemplateSerializer,
     AppendTaskTemplateSerializer,
@@ -241,6 +241,10 @@ class RequestTemplateViewSet(
     create=extend_schema(
         summary="Создание задачи",
         description="Используя эту комманду вы можете создать задачу",
+        request=CreateTaskSerializer,
+        responses={
+            201: DetailTaskSerializer
+        }
     )
 )
 class TaskViewSet(viewsets.ModelViewSet):
@@ -258,6 +262,8 @@ class TaskViewSet(viewsets.ModelViewSet):
             return DetailTaskSerializer
         if self.action == 'cansel':
             return DetailTaskSerializer
+        if self.action == 'create':
+            return CreateTaskSerializer
         return super().get_serializer_class()
 
     def get_queryset(self):
@@ -275,7 +281,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
-        response = DetailRequestTemplateSerializer(instance=serializer.instance)
+        response = DetailTaskSerializer(instance=serializer.instance)
         return Response(response.data, status=status.HTTP_201_CREATED, headers=headers)
 
     def perform_create(self, serializer):
@@ -296,18 +302,19 @@ class TaskViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(task)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @action(["post"], detail=True)
-    def comment(self, request, pk):
-        """
-        Комманда для добавления комментария к задаче
-        """
-        task = self.get_object()
-        serializer = CommentSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        comment = Comment(content_object=task, title=serializer.validated_data['title'], author=self.request.user, content=serializer.validated_data['content'], )
-        comment.save()
-        serializer = self.get_serializer(task)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+    # @action(["post"], detail=True)
+    # def comment(self, request, pk):
+    #     """
+    #     Комманда для добавления комментария к задаче
+    #     """
+    #     task = self.get_object()
+    #     serializer = CommentSerializer(data=request.data)
+    #     serializer.is_valid(raise_exception=True)
+    #     comment = Comment(content_object=task, title=serializer.validated_data['title'], author=self.request.user, content=serializer.validated_data['content'], )
+    #     comment.save()
+    #     serializer = self.get_serializer(task)
+    #     return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 
 class CreateRequestView(generics.CreateAPIView):
