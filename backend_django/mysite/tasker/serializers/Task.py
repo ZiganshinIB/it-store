@@ -1,11 +1,9 @@
-from lib2to3.pgen2.tokenize import group
-from tempfile import template
-
 from rest_framework import serializers
 from django.utils import timezone
 from ..models import Task, TaskTemplate
 from .TaskTemplate import TaskTemplateSerializer
 from  .Comment import CommentSerializer
+from mysite.serializers import GroupSerializer
 from djoser.conf import settings
 
 
@@ -40,6 +38,7 @@ class DetailTaskSerializer(serializers.ModelSerializer):
     executor = settings.SERIALIZERS.current_user(read_only=True)
     task_template = TaskTemplateSerializer(read_only=True, required=False)
     comments = CommentSerializer(many=True, read_only=True)
+    group = GroupSerializer(read_only=True, required=False)
     class Meta:
         model = Task
         fields = [
@@ -71,7 +70,8 @@ class DetailTaskSerializer(serializers.ModelSerializer):
 
 
 class CreateTaskSerializer(serializers.ModelSerializer):
-
+    task_template = serializers.IntegerField(write_only=True, required=False)
+    on_request = serializers.IntegerField(write_only=True, required=False)
     class Meta:
         model = Task
         fields = [

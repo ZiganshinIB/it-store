@@ -285,7 +285,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         return Response(response.data, status=status.HTTP_201_CREATED, headers=headers)
 
     def perform_create(self, serializer):
-        serializer.save()
+        serializer.save(author=self.request.user)
 
     @action(["get"], detail=True)
     def cansel(self, request, pk):

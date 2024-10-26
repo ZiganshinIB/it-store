@@ -333,6 +333,8 @@ class TaskAPITest(APITestCase):
         self.tasktemplate = TaskTemplate.objects.create(
             title='test',
             description='test',
+            dedlin=timezone.timedelta(days=1),
+            group=self.group_programmer
         )
 
 
@@ -401,10 +403,18 @@ class TaskAPITest(APITestCase):
         data = {
             'title': 'test',
             'description': 'test',
-            'executor': self.user_executor.id,
-            'group': self.group_it.id
         }
         response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        url = reverse('api_tasker:task-list')
+        data = {
+            'title': 'test',
+            'description': 'test',
+            'task_template': self.tasktemplate.id
+        }
+        response = self.client.post(url, data, format='json')
+        print(json.dumps(response.data, indent=4, ensure_ascii=False))
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
 

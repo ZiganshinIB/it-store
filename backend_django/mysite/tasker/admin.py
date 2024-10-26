@@ -51,7 +51,7 @@ class RequestTemplateAdmin(admin.ModelAdmin):
 
 @admin.register(TaskTemplate)
 class TaskTemplateAdmin(admin.ModelAdmin):
-    list_display = ('title', 'dedline')
+    list_display = ('title', 'dedlin')
 
 
 @admin.register(Task)

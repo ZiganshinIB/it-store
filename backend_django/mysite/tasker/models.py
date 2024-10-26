@@ -67,7 +67,7 @@ class TaskTemplate(models.Model):
     title = models.CharField(max_length=100, verbose_name='Название')
     description = models.TextField(verbose_name='Описание', blank=True, null=True)
     group = models.ForeignKey(Group, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Группа')
-    dedline = models.DurationField(verbose_name='Срок выполнения задачи', blank=True, null=True, default=timezone.timedelta(days=1, hours=0, minutes=0))
+    dedlin = models.DurationField(verbose_name='Срок выполнения задачи', blank=True, null=True, default=timezone.timedelta(days=1, hours=0, minutes=0))
     complexity = models.CharField(max_length=3, choices=COMPLEXITY, verbose_name='Сложность', blank=True, default='med')
 
     def __str__(self):
