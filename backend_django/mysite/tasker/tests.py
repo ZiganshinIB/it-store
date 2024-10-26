@@ -171,6 +171,7 @@ class TaskTemplateAPITest(APITestCase):
         self.group_admin.permissions.add(Permission.objects.get(codename='view_tasktemplate'))
         self.group_admin.permissions.add(Permission.objects.get(codename='change_tasktemplate'))
         self.group_admin.permissions.add(Permission.objects.get(codename='delete_tasktemplate'))
+
         self.user = User.objects.create_user(
             username='testuser1',
             first_name='Test',
@@ -259,6 +260,7 @@ class TaskAPITest(APITestCase):
         self.group_admin.permissions.add(Permission.objects.get(codename='change_task'))
         self.group_admin.permissions.add(Permission.objects.get(codename='delete_task'))
         self.group_it = Group.objects.create(name='it')
+        self.group_it.permissions.add(Permission.objects.get(codename='add_task'))
         self.group_programmer = Group.objects.create(name='programmer')
         self.user_author = User.objects.create_user(
             username='testuser1',
@@ -279,15 +281,13 @@ class TaskAPITest(APITestCase):
             password='testpassword'
         )
         self.user_it.groups.add(self.group_it)
-        self.user_programmer1 = User.objects.create_user(
+        self.user_programmer = User.objects.create_user(
             username='testuser7',
             first_name='Test7',
             last_name='User',
             password='testpassword'
         )
-        self.user_programmer1.groups.add(self.group_programmer)
-        self.user_programmпщer2.groups.add(self.group_programmer)
-
+        self.user_programmer.groups.add(self.group_programmer)
         self.admin = User.objects.create_user(
             username='admin',
             first_name='admin',
@@ -297,43 +297,38 @@ class TaskAPITest(APITestCase):
         self.admin.groups.add(self.group_admin)
 
         # create tasks
-        self.tasks = []
-        task = Task.objects.create(
+        self.task_author_executor = Task.objects.create(
             title='task1',
             description='test',
             dedlin_date=timezone.now(),
-            author=self.user_author1,
-            executor=self.user_executor1,
+            author=self.user_author,
+            executor=self.user_executor,
             group=self.group_it
         )
-        self.tasks.append(task)
-        task = Task.objects.create(
+        self.task_author_userit = Task.objects.create(
             title='task2',
             description='test',
             dedlin_date=timezone.now(),
-            author=self.user_author2,
-            executor=self.user_executor1,
+            author=self.user_author,
+            executor=self.user_it,
             group=self.group_it
         )
-        self.tasks.append(task)
-        task = Task.objects.create(
+        self.task_userit_executor = Task.objects.create(
             title='task3',
             description='test',
             dedlin_date=timezone.now(),
-            author=self.user_author1,
-            executor=self.user_executor2,
+            author=self.user_it,
+            executor=self.user_executor,
             group=self.group_programmer
         )
-        self.tasks.append(task)
-        task = Task.objects.create(
+        self.task_userit_userprogrammer = Task.objects.create(
             title='task4',
             description='test',
             dedlin_date=timezone.now(),
-            author=self.user_author2,
-            executor=self.user_executor2,
+            author=self.user_it,
+            executor=self.user_programmer,
             group=self.group_programmer
         )
-        self.tasks.append(task)
 
 
     def client_login(self, username='testuser1', password='testpassword'):
@@ -346,53 +341,54 @@ class TaskAPITest(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Token {response.data["auth_token"]}')
 
     def test_get_tasks_author(self):
-        self.client_login(self.user_author1.username, 'testpassword')
+        # author
+        self.client_login(self.user_author.username, 'testpassword')
         url = reverse('api_tasker:task-list')
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 2)
-        self.client_login(self.user_author2.username, 'testpassword')
+        # userit
+        self.client_login(self.user_it.username, 'testpassword')
+        url = reverse('api_tasker:task-list')
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 2)
-
-    def test_get_tasks_executor(self):
-        self.client_login(self.user_executor1.username, 'testpassword')
+        self.assertEqual(len(response.data), 4)
+        # programmer
+        self.client_login(self.user_programmer.username, 'testpassword')
         url = reverse('api_tasker:task-list')
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 2)
-        self.assertIn(response.data[0]['title'], ['task1', 'task2'])
-        self.client_login(self.user_executor2.username, 'testpassword')
-        response = self.client.get(url, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 2)
-
-    def test_get_tasks_group(self):
-        self.client_login(self.user_it1.username, 'testpassword')
+        # admin
+        self.client_login(self.admin.username, 'testpassword')
         url = reverse('api_tasker:task-list')
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 2)
-        self.client_login(self.user_it2.username, 'testpassword')
+        self.assertEqual(len(response.data), 4)
+        # executor
+        self.client_login(self.user_executor.username, 'testpassword')
+        url = reverse('api_tasker:task-list')
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 2)
 
     def test_task_cansel(self):
-        self.client_login(self.user_author1.username, 'testpassword')
-        url = reverse('api_tasker:task-cansel', args=[self.tasks[0].id])
+        self.client_login(self.user_author.username, 'testpassword')
+        url = reverse('api_tasker:task-cansel', args=[self.task_author_userit.id])
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['status'], 'cans')
 
     def test_task_cansel_error(self):
-        self.client_login(self.user_author2.username, 'testpassword')
-        url = reverse('api_tasker:task-cansel', args=[self.tasks[1].id])
+        self.client_login(self.user_it.username, 'testpassword')
+        url = reverse('api_tasker:task-cansel', args=[self.task_author_userit.id])
         response = self.client.get(url, format='json')
-        print(json.dumps(response.data, ensure_ascii=False, indent=4,))
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('Задача отменена', response.data['detail'])
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        self.client_login(self.user_programmer.username, 'testpassword')
+        url = reverse('api_tasker:task-cansel', args=[self.task_author_userit.id])
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 
 

@@ -258,6 +258,8 @@ class TaskViewSet(viewsets.ModelViewSet):
             return DetailTaskSerializer
         if self.action == 'cansel':
             return DetailTaskSerializer
+        if self.action == 'comment':
+            return CreateCommentSerializer
         return super().get_serializer_class()
 
     def get_queryset(self):
@@ -286,7 +288,6 @@ class TaskViewSet(viewsets.ModelViewSet):
         """
         Комманда для отмены задачи
         """
-
         task = self.get_object()
         task.status = 'cans'
         task.closed_at = timezone.now()
@@ -294,6 +295,19 @@ class TaskViewSet(viewsets.ModelViewSet):
         comment = Comment(content_object=task, title="Задача отменена", author=self.request.user, content="Задача отменена", )
         comment.save()
         task.save()
+        serializer = self.get_serializer(task)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(["post"], detail=True)
+    def comment(self, request, pk):
+        """
+        Комманда для добавления комментария к задаче
+        """
+        task = self.get_object()
+        serializer = CommentSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        comment = Comment(content_object=task, title=serializer.validated_data['title'], author=self.request.user, content=serializer.validated_data['content'], )
+        comment.save()
         serializer = self.get_serializer(task)
         return Response(serializer.data, status=status.HTTP_200_OK)
 

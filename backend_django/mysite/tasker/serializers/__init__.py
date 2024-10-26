@@ -49,7 +49,6 @@ __all__ = [
     'TaskSerializer',
     'DetailTaskSerializer',
     'ApproveSerializer',
-    'CommentSerializer',
     'CreateRequestSerializer',
     'ListRequestSerializer',
     'DetailRequestSerializer',
