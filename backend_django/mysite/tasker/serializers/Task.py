@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.utils import timezone
-from ..models import Task, TaskTemplate
+from ..models import Task, TaskTemplate, Request
 from .TaskTemplate import TaskTemplateSerializer
 from  .Comment import CommentSerializer
 from mysite.serializers import GroupSerializer
@@ -98,6 +98,7 @@ class CreateTaskSerializer(serializers.ModelSerializer):
                 task_instance.group = template.group
                 task_instance.task_template = template
         if request_id:
-            task_instance.on_request = request_id
+            request = Request.objects.get(id=request_id)
+            task_instance.on_request = request
         task_instance.save()
         return task_instance
