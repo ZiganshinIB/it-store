@@ -1,11 +1,5 @@
 
-from http.client import responses
-from trace import Trace
-
-from django.contrib.auth.decorators import permission_required
-from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
-from django.template.defaultfilters import title
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema_view, extend_schema
 from rest_framework import viewsets, views, generics, mixins, status
@@ -14,12 +8,14 @@ from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 from rest_framework.permissions import IsAuthenticated, DjangoModelPermissions
 
-from mysite.permissions import AdvanceDjangoModelPermissions, IsAuthor
 from person.serializers import DummyDetailSerializer, DummyDetailAndStatusSerializer
 
-from .models import ApprovalRoute, ApproveStep
-from .models import RequestTemplate, RequestTaskRelation, TaskTemplate
-from .models import Request, Task, Approve, Comment
+from . import permissions
+from .models import (
+    ApprovalRoute, ApproveStep,
+    RequestTemplate, RequestTaskRelation, TaskTemplate,
+    Request, Task, Approve, Comment
+)
 
 from .serializers import (
     ListApprovalRouteSerializer, DetailApprovalRouteSerializer, UpdateApprovalRouteSerializer,
@@ -28,7 +24,7 @@ from .serializers import (
     TaskSerializer, DetailTaskSerializer, CreateTaskSerializer,
     CreateRequestSerializer,
     CreateRequestTemplateSerializer,
-    AppendTaskTemplateSerializer,
+    AppendTaskTemplateSerializer, CommentSerializer, AuthorUpdateTaskSerializer,
 )
 
 
@@ -82,7 +78,7 @@ class ApprovalRouteViewSet(mixins.CreateModelMixin,
                            GenericViewSet):
     queryset = ApprovalRoute.objects.all()
     serializer_class = ListApprovalRouteSerializer
-    permission_classes = [AdvanceDjangoModelPermissions]
+    permission_classes = [permissions.Base.AdvanceDjangoModelPermissions]
 
     def get_serializer_class(self):
         """
@@ -154,7 +150,7 @@ class ApprovalRouteViewSet(mixins.CreateModelMixin,
 class TaskTemplateViewSet(viewsets.ModelViewSet):
     queryset = TaskTemplate.objects.all()
     serializer_class = TaskTemplateSerializer
-    permission_classes = [AdvanceDjangoModelPermissions]
+    permission_classes = [permissions.Base.AdvanceDjangoModelPermissions]
 
 
 @extend_schema_view(
@@ -196,7 +192,7 @@ class RequestTemplateViewSet(
 ):
     queryset = RequestTemplate.objects.all()
     serializer_class = ListRequestTemplateSerializer
-    permission_classes = [AdvanceDjangoModelPermissions]
+    permission_classes = [permissions.Base.AdvanceDjangoModelPermissions]
 
     def get_permissions(self):
         return super().get_permissions()
@@ -229,14 +225,16 @@ class RequestTemplateViewSet(
         description="Используя эту комманду вы можете получить список задач",
         responses={
             200: TaskSerializer,
-        }
+        },
+        tags=["Управление задачами"]
     ),
     retrieve=extend_schema(
         summary="Получить детальную информацию о задаче",
         description="Используя эту комманду вы можете получить детальную информацию о задаче",
         responses={
             200: TaskSerializer
-        }
+        },
+        tags=["Управление задачами"]
     ),
     create=extend_schema(
         summary="Создание задачи",
@@ -244,7 +242,35 @@ class RequestTemplateViewSet(
         request=CreateTaskSerializer,
         responses={
             201: DetailTaskSerializer
-        }
+        },
+        tags=["Управление задачами"]
+    ),
+    comment=extend_schema(
+        summary="Добавить комментарии к задаче",
+        description="Используя эту комманду вы можете добавить комментарии к задаче",
+        request=CommentSerializer,
+        responses={
+            201: CommentSerializer,
+            403: DummyDetailAndStatusSerializer
+        },
+        tags=["Управление задачами", "Комментирование"]
+    ),
+    change=extend_schema(
+        summary="Изменить задачу",
+        description="Используя эту комманду вы можете изменить задачу",
+        request=AuthorUpdateTaskSerializer,
+        responses={
+            200: DetailTaskSerializer
+        },
+        tags=["Управление задачами", "Изменение"]
+    ),
+    cansel=extend_schema(
+        summary="Отменить задачу",
+        description="Используя эту комманду вы можете отменить задачу",
+        responses={
+            200: DetailTaskSerializer
+        },
+        tags=["Управление задачами", "Отмена"]
     )
 )
 class TaskViewSet(viewsets.ModelViewSet):
@@ -254,7 +280,11 @@ class TaskViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action == 'cansel':
-            return [IsAuthor()]
+            return [permissions.Base.IsAuthor()]
+        if self.action == 'comment':
+            return [IsAuthenticated()]
+        if self.action == 'change':
+            return [permissions.Base.IsAuthor(), permissions.Task.IsNew()]
         return super().get_permissions()
 
     def get_serializer_class(self):
@@ -264,6 +294,10 @@ class TaskViewSet(viewsets.ModelViewSet):
             return DetailTaskSerializer
         if self.action == 'create':
             return CreateTaskSerializer
+        if self.action == "comment":
+            return CommentSerializer
+        if self.action == "change":
+            return AuthorUpdateTaskSerializer
         return super().get_serializer_class()
 
     def get_queryset(self):
@@ -302,19 +336,28 @@ class TaskViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(task)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    # @action(["post"], detail=True)
-    # def comment(self, request, pk):
-    #     """
-    #     Комманда для добавления комментария к задаче
-    #     """
-    #     task = self.get_object()
-    #     serializer = CommentSerializer(data=request.data)
-    #     serializer.is_valid(raise_exception=True)
-    #     comment = Comment(content_object=task, title=serializer.validated_data['title'], author=self.request.user, content=serializer.validated_data['content'], )
-    #     comment.save()
-    #     serializer = self.get_serializer(task)
-    #     return Response(serializer.data, status=status.HTTP_200_OK)
+    @action(["post"], detail=True)
+    def comment(self, request, pk):
+        """
+        Комманда для добавления комментария к задаче
+        """
+        task = self.get_object()
+        comment = self.get_serializer(data=request.data)
+        comment.is_valid(raise_exception=True)
+        comment.save(author=self.request.user, content_object=task)
+        return Response(comment.data, status=status.HTTP_201_CREATED)
 
+    @action(["put", "patch"], detail=True)
+    def change(self, request, pk):
+        """
+        Комманда для изменения задачи Автором.
+        """
+        task = self.get_object()
+        serializer = self.get_serializer(task, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        response = DetailTaskSerializer(instance=serializer.instance)
+        return Response(response.data, status=status.HTTP_200_OK)
 
 
 class CreateRequestView(generics.CreateAPIView):

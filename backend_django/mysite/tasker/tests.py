@@ -252,20 +252,6 @@ class TaskTemplateAPITest(APITestCase):
         response = self.client.delete(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-# title = models.CharField(max_length=100, verbose_name='Заголовок')
-#     description = models.TextField(verbose_name='Описание', blank=True, null=True)
-#     dedlin_date = models.DateTimeField(verbose_name='Крайний срок выполнения')
-#     cansel_date = models.DateTimeField(blank=True, null=True, verbose_name="Дата завершение")
-#     author = models.ForeignKey(UserModel, on_delete=models.SET_NULL, null=True, verbose_name='Автор', related_name='requests')
-#     executor = models.ForeignKey(UserModel, on_delete=models.SET_NULL, null=True, blank=True, default=None,
-#                                  verbose_name='Исполнитель')
-#     group = models.ForeignKey(Group, on_delete=models.SET_NULL, null=True, blank=True, default=None,)
-#     status = models.CharField(max_length=10, choices=STATUS, default='new',
-#                               verbose_name='Статус')
-#     request_template = models.ForeignKey(RequestTemplate, on_delete=models.SET_NULL, null=True,
-#                                          verbose_name='Шаблон заявки')
-#     # Для связи между заявками и комментариями. Далее вы сможете фильтровать заявки по комментариям
-#     comments = GenericRelation('Comment', related_query_name='request')
 
 class TaskAPITest(APITestCase):
     def setUp(self):
@@ -433,7 +419,6 @@ class TaskAPITest(APITestCase):
             'task_template': self.tasktemplate.id
         }
         response = self.client.post(url, data, format='json')
-        print(json.dumps(response.data, indent=4, ensure_ascii=False))
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
 
@@ -455,6 +440,68 @@ class TaskAPITest(APITestCase):
         }
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_add_comment(self):
+        self.client_login(self.user_it.username, 'testpassword')
+        url = reverse('api_tasker:task-comment', args=[self.task_author_userit.id])
+        data = {
+            'title': 'test',
+            'content': 'test',
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        self.client_login(self.user_author.username, 'testpassword')
+        url = reverse('api_tasker:task-comment', args=[self.task_author_userit.id])
+        data = {
+            'title': 'test3',
+            'content': 'test3',
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+
+        self.client_login(self.user_programmer.username, 'testpassword')
+        url = reverse('api_tasker:task-comment', args=[self.task_author_userit.id])
+        data = {
+            'title': 'test',
+            'content': 'test',
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+    def test_change(self):
+        self.client_login(self.user_author.username, 'testpassword')
+        url = reverse('api_tasker:task-change', args=[self.task_author_userit.id])
+        data = {
+            'title': 'Super test',
+            'description': 'test',
+        }
+        response = self.client.put(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['title'], 'Super test')
+
+        self.client_login(self.user_programmer.username, 'testpassword')
+        url = reverse('api_tasker:task-change', args=[self.task_author_userit.id])
+        data = {
+            'title': 'Super test',
+            'description': 'test',
+        }
+        response = self.client.put(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+        self.client_login(self.user_it.username, 'testpassword')
+        url = reverse('api_tasker:task-change', args=[self.task_author_userit.id])
+        data = {
+            'title': 'Super test',
+            'description': 'test',
+        }
+        response = self.client.put(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+
 
 
 

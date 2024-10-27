@@ -102,3 +102,12 @@ class CreateTaskSerializer(serializers.ModelSerializer):
             task_instance.on_request = request
         task_instance.save()
         return task_instance
+
+
+class AuthorUpdateTaskSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Task
+        fields = [
+            'title',
+            'description',
+        ]
