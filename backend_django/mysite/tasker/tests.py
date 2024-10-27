@@ -1,5 +1,6 @@
 import json
 from distutils.log import fatal
+from tokenize import group
 
 from django.contrib.auth.models import Group, Permission
 from django.template.defaultfilters import title
@@ -499,6 +500,41 @@ class TaskAPITest(APITestCase):
         }
         response = self.client.put(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_update(self):
+        self.client_login(self.user_author.username, 'testpassword')
+        url = reverse('api_tasker:task-detail', args=[self.task_author_userit.id])
+        data = {
+            'title': 'Super test',
+            'description': 'test',
+        }
+        response = self.client.patch(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        self.client_login(self.user_programmer.username, 'testpassword')
+        url = reverse('api_tasker:task-detail', args=[self.task_author_userit.id])
+        data = {
+            'title': 'Super test',
+            'description': 'test',
+        }
+        response = self.client.patch(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+        self.client_login(self.user_programmer.username, 'testpassword')
+        url = reverse('api_tasker:task-detail', args=[self.task_userit_userprogrammer.id])
+        data = {
+            'title': 'Super test',
+            'description': 'test',
+            'dedlin_date': timezone.now(),
+            'group': self.group_programmer.id,
+        }
+        response = self.client.patch(url, data, format='json')
+        print(json.dumps(response.data, indent=4, ensure_ascii=False))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+
+
 
 
 

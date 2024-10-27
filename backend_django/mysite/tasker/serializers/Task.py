@@ -1,3 +1,6 @@
+from django.contrib.auth.models import Group
+from django.contrib.auth import get_user_model
+from django.core.management import execute_from_command_line
 from rest_framework import serializers
 from django.utils import timezone
 from ..models import Task, TaskTemplate, Request
@@ -6,6 +9,8 @@ from  .Comment import CommentSerializer
 from mysite.serializers import GroupSerializer
 from djoser.conf import settings
 
+
+UserModel = get_user_model()
 
 class TaskSerializer(serializers.ModelSerializer):
     class Meta:
@@ -111,3 +116,34 @@ class AuthorUpdateTaskSerializer(serializers.ModelSerializer):
             'title',
             'description',
         ]
+
+class UpdateTaskSerializer(serializers.ModelSerializer):
+    group = serializers.IntegerField(write_only=True, required=False)
+    class Meta:
+        model = Task
+        fields = [
+            'title',
+            'description',
+            'dedlin_date',
+            'group',
+            'executor',
+        ]
+
+    def update(self, instance, validated_data):
+        instance.title = validated_data.get('title', instance.title)
+        instance.description = validated_data.get('description', instance.description)
+        instance.dedlin_date = validated_data.get('dedlin_date', instance.dedlin_date)
+        group_id = validated_data.get('group', instance.group.id)
+        executor_id = validated_data.get('executor', instance.executor.id)
+        if group_id != instance.group.id and Group.objects.filter(id=group_id).exists():
+            instance.group = Group.objects.get(id=group_id)
+            if executor_id == instance.executor.id:
+                instance.executor = None
+            else:
+                instance.executor = UserModel.objects.get(id=executor_id)
+            instance.save()
+            return instance
+        executor = UserModel.objects.get(id=executor_id)
+        instance.executor = executor
+        instance.save()
+        return instance

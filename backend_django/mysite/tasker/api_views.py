@@ -1,3 +1,4 @@
+from http.client import responses
 
 from django.db.models import Q
 from django.utils import timezone
@@ -24,7 +25,7 @@ from .serializers import (
     TaskSerializer, DetailTaskSerializer, CreateTaskSerializer,
     CreateRequestSerializer,
     CreateRequestTemplateSerializer,
-    AppendTaskTemplateSerializer, CommentSerializer, AuthorUpdateTaskSerializer,
+    AppendTaskTemplateSerializer, CommentSerializer, AuthorUpdateTaskSerializer, UpdateTaskSerializer,
 )
 
 
@@ -245,6 +246,24 @@ class RequestTemplateViewSet(
         },
         tags=["Управление задачами"]
     ),
+    update=extend_schema(
+        summary="Изменить задачу",
+        description="Используя эту комманду вы можете изменить задачу",
+        request=UpdateTaskSerializer,
+        responses={
+            200: DetailTaskSerializer
+        },
+        tags=["Управление задачами",]
+    ),
+    partial_update=extend_schema(
+        summary="Изменить задачу",
+        description="Используя эту комманду вы можете изменить задачу",
+        request=UpdateTaskSerializer,
+        responses={
+            200: DetailTaskSerializer
+        },
+        tags=["Управление задачами",]
+    ),
     comment=extend_schema(
         summary="Добавить комментарии к задаче",
         description="Используя эту комманду вы можете добавить комментарии к задаче",
@@ -279,12 +298,18 @@ class TaskViewSet(viewsets.ModelViewSet):
     permission_classes = [DjangoModelPermissions]
 
     def get_permissions(self):
+        permission_classes = [IsAuthenticated]
         if self.action == 'cansel':
-            return [permissions.Base.IsAuthor()]
+            permission_classes+= [permissions.Base.IsAuthor]
+            return [permission() for permission in permission_classes]
         if self.action == 'comment':
-            return [IsAuthenticated()]
+            return [permission() for permission in permission_classes]
         if self.action == 'change':
-            return [permissions.Base.IsAuthor(), permissions.Task.IsNew()]
+            permission_classes += [permissions.Base.IsAuthor, permissions.Task.IsNew]
+            return [permission() for permission in permission_classes]
+        if self.action in ['update', 'partial_update']:
+            permission_classes += [(permissions.Base.IsGroup|permissions.Base.IsExecutor), permissions.Task.CanChange]
+            return [permission() for permission in permission_classes]
         return super().get_permissions()
 
     def get_serializer_class(self):
@@ -298,6 +323,8 @@ class TaskViewSet(viewsets.ModelViewSet):
             return CommentSerializer
         if self.action == "change":
             return AuthorUpdateTaskSerializer
+        if self.action == "update" or self.action == "partial_update":
+            return UpdateTaskSerializer
         return super().get_serializer_class()
 
     def get_queryset(self):
@@ -320,6 +347,17 @@ class TaskViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        if getattr(instance, '_prefetched_objects_cache', None):
+            instance._prefetched_objects_cache = {}
+        response = DetailTaskSerializer(instance=serializer.instance)
+        return Response(response.data, status=status.HTTP_200_OK)
 
     @action(["get"], detail=True)
     def cansel(self, request, pk):

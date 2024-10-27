@@ -10,7 +10,7 @@ class IsExecutor(permissions.BasePermission):
 
 class IsGroup(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
-        return obj.group == request.user
+        return request.user.groups.filter(name=obj.group).exists()
 
 class AdvanceDjangoModelPermissions(permissions.DjangoModelPermissions):
     perms_map = {

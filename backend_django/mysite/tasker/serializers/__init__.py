@@ -21,7 +21,8 @@ from .Task import (
     TaskSerializer,
     DetailTaskSerializer,
     CreateTaskSerializer,
-    AuthorUpdateTaskSerializer
+    AuthorUpdateTaskSerializer,
+    UpdateTaskSerializer
 )
 from .Approve import (
     ApproveSerializer
@@ -52,6 +53,7 @@ __all__ = [
     'DetailTaskSerializer',
     'CreateTaskSerializer',
     'AuthorUpdateTaskSerializer',
+    'UpdateTaskSerializer',
     'ApproveSerializer',
     'CreateRequestSerializer',
     'ListRequestSerializer',
