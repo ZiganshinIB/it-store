@@ -5,8 +5,7 @@ from .api_views import (
     ApprovalRouteViewSet,
     RequestTemplateViewSet,
     TaskTemplateViewSet,
-    TaskViewSet,
-    CreateRequestView,
+    TaskViewSet, RequestViewSet,
     # ListRequestView,
     # DetailRequestView,
     # CanselRequestView,
@@ -21,11 +20,11 @@ router.register('approval_route', ApprovalRouteViewSet)
 router.register('request_template', RequestTemplateViewSet)
 router.register('task_template', TaskTemplateViewSet)
 router.register('task', TaskViewSet)
+router.register('request', RequestViewSet)
 
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('request/', CreateRequestView.as_view(), name='create-request'),
     # path('request/', ListRequestView.as_view(), name='list-request'),
     # path('request/<int:pk>/', DetailRequestView.as_view(), name='detail-request'),
     # path('request/<int:pk>/cansel/', CanselRequestView.as_view(), name='cansel-request'),

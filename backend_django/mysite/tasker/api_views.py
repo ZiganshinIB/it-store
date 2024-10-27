@@ -26,6 +26,7 @@ from .serializers import (
     CreateRequestSerializer,
     CreateRequestTemplateSerializer,
     AppendTaskTemplateSerializer, CommentSerializer, AuthorUpdateTaskSerializer, UpdateTaskSerializer,
+    ListRequestSerializer, DetailRequestSerializer,
 )
 
 
@@ -398,12 +399,54 @@ class TaskViewSet(viewsets.ModelViewSet):
         return Response(response.data, status=status.HTTP_200_OK)
 
 
-class CreateRequestView(generics.CreateAPIView):
-    serializer_class = CreateRequestSerializer
-    permission_classes = [IsAuthenticated]
+@extend_schema_view(
+    list=extend_schema(
+        summary="Просмотр всех запросов",
+        description="Просмотр всех запросов",
+        tags=["Запросы"],
+        responses={
+            200: ListRequestSerializer,
+        },
+    ),
+    retrieve=extend_schema(
+        summary="Просмотр одного запроса",
+        description="Просмотр одного запроса"
+    ),
+)
+class RequestViewSet(viewsets.ModelViewSet):
+    queryset = Request.objects.all()
+    serializer_class = ListRequestSerializer
+    permission_classes = [DjangoModelPermissions]
 
-    def perform_create(self, serializer):
-        serializer.save(author=self.request.user)
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        return [permission() for permission in permission_classes]
+
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return DetailRequestSerializer
+        return super().get_serializer_class()
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_superuser or user.has_perm('tasker.view_request'):
+            return self.queryset
+        else:
+            user_groups = user.groups.all()
+            queryset = self.queryset.prefetch_related(
+                'approves',
+                'tasks'
+            ).filter(
+                Q(author=user) |
+                Q(executor=user) |
+                Q(group__in=user_groups) |
+                Q(approves__author=user) |
+                Q(approves__coordinating=user) |
+                Q(tasks__author=user) |
+                Q(tasks__executor=user) |
+                Q(tasks__group__in=user_groups)
+            ).distinct()
+            return queryset
 
 
 # class ListRequestView(generics.ListAPIView):

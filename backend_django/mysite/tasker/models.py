@@ -93,7 +93,7 @@ class RequestTemplate(models.Model):
     dedline = models.DurationField(verbose_name='Срок выполнения задачи', blank=True, null=True, default=timezone.timedelta(days=3, hours=0, minutes=0))
     complexity = models.CharField(max_length=3, choices=COMPLEXITY, verbose_name='Сложность')
     group = models.ForeignKey(Group, on_delete=models.SET_NULL, verbose_name='Группа', blank=True, null=True, default=None)
-    tasks = models.ManyToManyField(TaskTemplate, verbose_name='Задачи', through='RequestTaskRelation', blank=True, default=None,)
+    tasks = models.ManyToManyField(TaskTemplate, verbose_name='Задачи', through='RequestTaskRelation', blank=True)
 
     def __str__(self):
         return self.title

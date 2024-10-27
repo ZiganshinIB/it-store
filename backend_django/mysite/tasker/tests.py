@@ -16,7 +16,7 @@ from .models import (
     ApprovalRoute,
     ApproveStep,
     TaskTemplate,
-    Task, Request
+    Task, Request, RequestTemplate
 )
 
 from .serializers import (
@@ -533,6 +533,160 @@ class TaskAPITest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
 
+class RequestViewTest(APITestCase):
+    def setUp(self):
+        # Groups
+        self.group_admin = Group.objects.create(name='admin')
+        self.group_it = Group.objects.create(name='it')
+        self.group_programmer = Group.objects.create(name='programmer')
+        # Permissions
+        self.group_admin.permissions.add(Permission.objects.get(codename='view_request'))
+        self.group_admin.permissions.add(Permission.objects.get(codename='add_request'))
+        self.group_admin.permissions.add(Permission.objects.get(codename='change_request'))
+        self.group_admin.permissions.add(Permission.objects.get(codename='delete_request'))
+
+        # Users
+        self.admin = User.objects.create_user(username='admin', first_name='admin', last_name='admin',
+                                              password='testpassword')
+        self.admin.groups.add(self.group_admin)
+        self.user_it = User.objects.create_user(username='it', first_name='it', last_name='it',
+                                                password='testpassword')
+        self.user_it.groups.add(self.group_it)
+        self.user_programmer = User.objects.create_user(username='programmer', first_name='programmer', last_name='programmer',
+                                                        password='testpassword')
+        self.user_programmer.groups.add(self.group_programmer)
+        self.author = User.objects.create_user(username='author', first_name='author', last_name='author',
+                                               password='testpassword')
+        self.executor = User.objects.create_user(username='executor', first_name='executor', last_name='executor',
+                                                 password='testpassword')
+        # Requests
+        self.request_author_executor_it = Request.objects.create(
+            title='request_author_executor_it', description='request_author_executor_it#1',
+            dedlin_date=timezone.now()+timezone.timedelta(days=1),
+            author=self.author, executor=self.executor, group=self.group_it,
+        )
+
+        self.request_author_it = Request.objects.create(
+            title='request_author_it', description='request_author_it#2',
+            dedlin_date=timezone.now()+timezone.timedelta(days=1),
+            author=self.author, group=self.group_it,
+        )
+
+        self.request_author_programmer = Request.objects.create(
+            title='request_author_programmer', description='request_author_programmer#3',
+            dedlin_date=timezone.now()+timezone.timedelta(days=1),
+            author=self.author, group=self.group_programmer,
+        )
+        self.request_userit_programmer = Request.objects.create(
+            title='request_userit_programmer', description='request_userit_programmer#4',
+            dedlin_date=timezone.now()+timezone.timedelta(days=1),
+            author=self.user_it, group=self.group_programmer,
+        )
+
+        # ApprovalRoute
+        self.approval_route = ApprovalRoute.objects.create(
+            title='test', description='test',
+            author=self.admin,
+        )
+        ApproveStep.objects.create(
+            title='approve_#1', route=self.approval_route,
+            order_number=1, approval_type='manager',
+        )
+        ApproveStep.objects.create(
+            title='approve_#2', route=self.approval_route,
+            order_number=2, approval_type='manager',
+        )
+        # RequestTemplate
+        self.request_template = RequestTemplate.objects.create(
+            title='request_template', description='request_template',
+            group=self.group_programmer, approval_route=self.approval_route,
+            complexity='med',
+        )
+        self.request_template.tasks.add(
+            TaskTemplate.objects.create(
+                title='task_template', description='task_template',
+                group=self.group_it,
+            )
+        )
+        self.request_template.tasks.add(
+            TaskTemplate.objects.create(
+                title='task_template', description='task_template',
+                group=self.group_programmer,
+            )
+        )
+
+    def client_login(self, username='testuser1', password='testpassword'):
+        url = reverse('login')
+        data = {
+            'username': username,
+            'password': password,
+        }
+        response = self.client.post(url, data, format='json')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {response.data["auth_token"]}')
+
+    def test_list(self):
+        self.client_login(self.admin.username, 'testpassword')
+        url = reverse('api_tasker:request-list')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 4)
+
+        self.client_login(self.author.username, 'testpassword')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 3)
+
+        self.client_login(self.user_it.username, 'testpassword')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 3)
+
+        self.client_login(self.user_programmer.username, 'testpassword')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+
+        self.client_login(self.executor.username, 'testpassword')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+
+
+    def test_detail(self):
+        self.client_login(self.admin.username, 'testpassword')
+        url = reverse('api_tasker:request-detail', args=[self.request_author_programmer.id])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['title'], 'request_author_programmer')
+
+        self.client_login(self.author.username, 'testpassword')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['title'], 'request_author_programmer')
+
+        self.client_login(self.user_programmer.username, 'testpassword')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['title'], 'request_author_programmer')
+
+        self.client_login(self.user_it.username, 'testpassword')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    # def test_create(self):
+    #     pass
+    #
+    # def test_update(self):
+    #     pass
+    #
+    # def test_change(self):
+    #     pass
+    #
+    # def test_cansel(self):
+    #     pass
+    #
+    # def test_check(self):
+    #     pass
 
 
 
