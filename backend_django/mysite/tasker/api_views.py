@@ -1,4 +1,5 @@
 from http.client import responses
+from venv import create
 
 from django.db.models import Q
 from django.utils import timezone
@@ -410,8 +411,19 @@ class TaskViewSet(viewsets.ModelViewSet):
     ),
     retrieve=extend_schema(
         summary="Просмотр одного запроса",
-        description="Просмотр одного запроса"
+        description="Просмотр одного запроса",
+        tags=["Запросы"],
+        responses={
+            200: DetailRequestSerializer,
+        }
     ),
+    create=extend_schema(
+        summary="Создание запроса",
+        description="Создание запроса",
+        tags=["Запросы"],
+
+
+    )
 )
 class RequestViewSet(viewsets.ModelViewSet):
     queryset = Request.objects.all()

@@ -559,6 +559,9 @@ class RequestViewTest(APITestCase):
                                                password='testpassword')
         self.executor = User.objects.create_user(username='executor', first_name='executor', last_name='executor',
                                                  password='testpassword')
+
+        self.user = User.objects.create_user(username='user', first_name='user', last_name='user',
+                                            password='testpassword')
         # Requests
         self.request_author_executor_it = Request.objects.create(
             title='request_author_executor_it', description='request_author_executor_it#1',
@@ -673,8 +676,19 @@ class RequestViewTest(APITestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-    # def test_create(self):
-    #     pass
+    def test_create(self):
+        # Crete Request use
+        self.client_login(self.user.username, 'testpassword')
+        url = reverse('api_tasker:request-list')
+        data = {
+            'title': 'test',
+            'description': 'test',
+            'request_template': self.request_template.id,
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['title'], 'test')
+        pass
     #
     # def test_update(self):
     #     pass
