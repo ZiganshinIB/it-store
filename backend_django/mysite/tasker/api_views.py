@@ -8,7 +8,7 @@ from rest_framework import viewsets, views, generics, mixins, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
-from rest_framework.permissions import IsAuthenticated, DjangoModelPermissions
+from rest_framework.permissions import IsAuthenticated, DjangoModelPermissions, AllowAny
 
 from person.serializers import DummyDetailSerializer, DummyDetailAndStatusSerializer
 
@@ -421,7 +421,10 @@ class TaskViewSet(viewsets.ModelViewSet):
         summary="Создание запроса",
         description="Создание запроса",
         tags=["Запросы"],
-
+        request=CreateRequestSerializer,
+        responses={
+            201: DetailRequestSerializer,
+        }
 
     )
 )
@@ -432,11 +435,17 @@ class RequestViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         permission_classes = [IsAuthenticated]
+        if self.action == 'create':
+            permission_classes.append(AllowAny)
+        else:
+            permission_classes.append(DjangoModelPermissions)
         return [permission() for permission in permission_classes]
 
     def get_serializer_class(self):
         if self.action == 'retrieve':
             return DetailRequestSerializer
+        if self.action == 'create':
+            return CreateRequestSerializer
         return super().get_serializer_class()
 
     def get_queryset(self):
@@ -459,6 +468,17 @@ class RequestViewSet(viewsets.ModelViewSet):
                 Q(tasks__group__in=user_groups)
             ).distinct()
             return queryset
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        response = DetailRequestSerializer(instance=serializer.instance)
+        return Response(response.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
 
 
 # class ListRequestView(generics.ListAPIView):

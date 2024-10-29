@@ -533,7 +533,7 @@ class TaskAPITest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
 
-class RequestViewTest(APITestCase):
+class RequestAPITest(APITestCase):
     def setUp(self):
         # Groups
         self.group_admin = Group.objects.create(name='admin')
