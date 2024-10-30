@@ -4,6 +4,9 @@ export default{
         return{
             info: 'Title'
         }
+    },
+    method: {
+        
     }
 
 }
