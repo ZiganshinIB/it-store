@@ -32,7 +32,11 @@ class ApproveStep(models.Model):
         ('group', 'Группа'),
     )
     title = models.CharField(max_length=100, verbose_name='Тема согласования')
-    route = models.ForeignKey(ApprovalRoute, on_delete=models.CASCADE, verbose_name='Маршрут согласования', related_name='steps')
+    route = models.ForeignKey(
+        ApprovalRoute,
+        on_delete=models.CASCADE,
+        verbose_name='Маршрут согласования',
+        related_name='steps')
     order_number = models.IntegerField(verbose_name='Порядковый номер')
     approval_type = models.CharField(max_length=10, choices=APPROVAL_TYPE, verbose_name='Тип согласования')
     specific_approver = models.ForeignKey(UserModel, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Согласователь')
@@ -90,7 +94,7 @@ class RequestTemplate(models.Model):
     image = models.ImageField(upload_to='media/request/', verbose_name='Изображение', blank=True, null=True)
     approval_route = models.ForeignKey(ApprovalRoute, on_delete=models.SET_NULL, verbose_name='Маршрут согласования',
                                        blank=True, null=True, default=None)
-    dedline = models.DurationField(verbose_name='Срок выполнения задачи', blank=True, null=True, default=timezone.timedelta(days=3, hours=0, minutes=0))
+    dedlin = models.DurationField(verbose_name='Срок выполнения задачи', blank=True, null=True, default=timezone.timedelta(days=3, hours=0, minutes=0))
     complexity = models.CharField(max_length=3, choices=COMPLEXITY, verbose_name='Сложность')
     group = models.ForeignKey(Group, on_delete=models.SET_NULL, verbose_name='Группа', blank=True, null=True, default=None)
     tasks = models.ManyToManyField(TaskTemplate, verbose_name='Задачи', through='RequestTaskRelation', blank=True)
@@ -129,7 +133,7 @@ class Request(models.Model):
     title = models.CharField(max_length=100, verbose_name='Заголовок')
     description = models.TextField(verbose_name='Описание', blank=True, null=True)
     closed_at = models.DateTimeField(blank=True, null=True, verbose_name='Дата закрытия')
-    dedlin_date = models.DateTimeField(verbose_name='Крайний срок выполнения')
+    dedlin_date = models.DateTimeField(verbose_name='Крайний срок выполнения', blank=True, null=True)
     cansel_date = models.DateTimeField(blank=True, null=True, verbose_name="Дата завершение")
     author = models.ForeignKey(UserModel, on_delete=models.SET_NULL, null=True, verbose_name='Автор', related_name='requests')
     executor = models.ForeignKey(UserModel, on_delete=models.SET_NULL, null=True, blank=True, default=None,
@@ -211,9 +215,34 @@ class Approve(models.Model):
     title = models.CharField(max_length=100, verbose_name='Заголовок')
     description = models.TextField(verbose_name='Описание', blank=True, null=True)
     order_number = models.IntegerField(verbose_name='Порядковый номер', blank=True, null=True, default=None)
-    author = models.ForeignKey(UserModel, on_delete=models.SET_NULL, null=True, verbose_name='Автор', related_name='author_approve')
-    on_request = models.ForeignKey(Request, on_delete=models.SET_NULL, null=True, verbose_name='Заявка', related_name='approves')
-    coordinating = models.ForeignKey(UserModel, on_delete=models.SET_NULL, null=True, verbose_name='Согласователь', related_name='coordinating_approve')
+    author = models.ForeignKey(
+        UserModel,
+        on_delete=models.SET_NULL,
+        null=True,
+        verbose_name='Автор',
+        related_name='author_approve'
+    )
+    on_request = models.ForeignKey(
+        Request, on_delete=models.SET_NULL,
+        null=True,
+        verbose_name='Заявка',
+        related_name='approves'
+    )
+    coordinating = models.ForeignKey(
+        UserModel,
+        on_delete=models.SET_NULL,
+        null=True,
+        verbose_name='Согласователь',
+        related_name='coordinating_approve'
+    )
+    group = models.ForeignKey(
+        Group,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=None,
+        verbose_name='Группа'
+    )
     status = models.CharField(max_length=10, choices=STATUS, verbose_name='Статус', default='new')
     cansel_date = models.DateTimeField(blank=True, null=True, verbose_name="Дата завершение")
 
@@ -226,6 +255,7 @@ class Approve(models.Model):
     class Meta:
         verbose_name = 'Согласование'
         verbose_name_plural = 'Согласования'
+        ordering = ['order_number']
 
 
 class Comment(models.Model):

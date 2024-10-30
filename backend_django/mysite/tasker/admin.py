@@ -45,7 +45,7 @@ class RequestTaskRelationInline(admin.TabularInline):
 
 @admin.register(RequestTemplate)
 class RequestTemplateAdmin(admin.ModelAdmin):
-    list_display = ('title', 'complexity', 'dedline')
+    list_display = ('title', 'complexity', 'dedlin')
     inlines = [RequestTaskRelationInline]  # Добавляем inline для промежуточной модели
 
 
