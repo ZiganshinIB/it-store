@@ -580,6 +580,12 @@ class RequestAPITest(APITestCase):
             dedlin_date=timezone.now()+timezone.timedelta(days=1),
             author=self.author, group=self.group_programmer,
         )
+        Task.objects.create(
+            title='task_author_programmer', description='task_author_programmer#3',
+            dedlin_date=timezone.now()+timezone.timedelta(days=1),
+            author=self.author, group=self.group_programmer,
+            on_request=self.request_author_programmer
+        )
         self.request_userit_programmer = Request.objects.create(
             title='request_userit_programmer', description='request_userit_programmer#4',
             dedlin_date=timezone.now()+timezone.timedelta(days=1),
@@ -688,7 +694,7 @@ class RequestAPITest(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['title'], 'test')
-        pass
+
     #
     # def test_update(self):
     #     pass
@@ -696,9 +702,37 @@ class RequestAPITest(APITestCase):
     # def test_change(self):
     #     pass
     #
-    # def test_cansel(self):
-    #     pass
-    #
+    def test_cansel(self):
+        # Только Автор может отменить задачу
+        self.client_login(self.author.username, 'testpassword')
+        url = reverse('api_tasker:request-cansel', args=[self.request_author_programmer.id])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['status'], 'cans')
+
+        self.assertEqual(self.request_author_programmer.status, 'cans')
+        self.assertEqual(self.request_author_programmer.closed_at, timezone.now())
+        self.assertEqual(self.request_author_programmer.cansel_date, timezone.now())
+        # при отмене заявки, задачи и согласовании отменяются
+        self.assertEqual(self.request_author_it.tasks.first().status, 'cans')
+
+        # не автор не может отменить задачу
+        self.client_login(self.user_programmer.username, 'testpassword')
+        url = reverse('api_tasker:request-cansel', args=[self.request_author_programmer.id])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+        # Но если заявка имеет статус 'check', то заявка закрывается
+        self.request_author_programmer.status = 'check'
+        self.request_author_programmer.save()
+        self.client_login(self.author.username, 'testpassword')
+        url = reverse('api_tasker:request-cansel', args=[self.request_author_programmer.id])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['status'], 'end')
+
+
     # def test_check(self):
     #     pass
 
