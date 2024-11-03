@@ -22,3 +22,7 @@ class AdvanceDjangoModelPermissions(permissions.DjangoModelPermissions):
         'PATCH': ['%(app_label)s.change_%(model_name)s'],
         'DELETE': ['%(app_label)s.delete_%(model_name)s'],
     }
+
+class IsCheck(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj):
+        return obj.status == 'chk'
