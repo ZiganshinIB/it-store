@@ -89,6 +89,11 @@ class RequestTemplate(models.Model):
         ('med', 'Средняя'),
         ('hig', 'Высокая'),
     )
+    PRIORITY = (
+        ('low', 'Низкий'),
+        ('med', 'Средний'),
+        ('hig', 'Высокий'),
+    )
     title = models.CharField(max_length=100, verbose_name='Название')
     description = models.TextField(verbose_name='Описание', blank=True, null=True)
     image = models.ImageField(upload_to='media/request/', verbose_name='Изображение', blank=True, null=True)
@@ -96,6 +101,7 @@ class RequestTemplate(models.Model):
                                        blank=True, null=True, default=None)
     dedlin = models.DurationField(verbose_name='Срок выполнения задачи', blank=True, null=True, default=timezone.timedelta(days=3, hours=0, minutes=0))
     complexity = models.CharField(max_length=3, choices=COMPLEXITY, verbose_name='Сложность')
+    priority = models.CharField(max_length=3, choices=PRIORITY, verbose_name='Приоритет', default='med')
     group = models.ForeignKey(Group, on_delete=models.SET_NULL, verbose_name='Группа', blank=True, null=True, default=None)
     tasks = models.ManyToManyField(TaskTemplate, verbose_name='Задачи', through='RequestTaskRelation', blank=True)
 
@@ -130,6 +136,16 @@ class Request(models.Model):
         ('chk', 'Проверяет пользователь'),
         ('end', 'Завершен')
     )
+    COMPLEXITY = (
+        ('low', 'Низкая'),
+        ('med', 'Средняя'),
+        ('hig', 'Высокая'),
+    )
+    PRIORITY = (
+        ('low', 'Низкий'),
+        ('med', 'Средний'),
+        ('hig', 'Высокий'),
+    )
     title = models.CharField(max_length=100, verbose_name='Заголовок')
     description = models.TextField(verbose_name='Описание', blank=True, null=True)
     closed_at = models.DateTimeField(blank=True, null=True, verbose_name='Дата закрытия')
@@ -141,6 +157,8 @@ class Request(models.Model):
     group = models.ForeignKey(Group, on_delete=models.SET_NULL, null=True, blank=True, default=None,)
     status = models.CharField(max_length=10, choices=STATUS, default='new',
                               verbose_name='Статус')
+    complexity = models.CharField(max_length=3, choices=COMPLEXITY, verbose_name='Сложность', default='med')
+    priority = models.CharField(max_length=3, choices=PRIORITY, verbose_name='Приоритет', default='med')
     request_template = models.ForeignKey(RequestTemplate, on_delete=models.SET_NULL, null=True,
                                          verbose_name='Шаблон заявки')
     # Для связи между заявками и комментариями. Далее вы сможете фильтровать заявки по комментариям
