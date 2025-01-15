@@ -59,7 +59,8 @@ class DetailRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = Request
         fields = ['id', 'title', 'description', 'group', 'executor', 'dedlin_date',
-                  'request_template', 'status', 'tasks', 'approves', 'comments']
+                  'request_template', 'status', 'tasks', 'approves', 'comments',
+                  'closed_at', 'created_at']
         read_only_fields = ['id', 'tasks', 'approves', 'comments']
 
 

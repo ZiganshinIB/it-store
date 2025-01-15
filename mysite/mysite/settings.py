@@ -119,22 +119,6 @@ DJOSER = {
     'PERMISSIONS':{
         'user_create': ['rest_framework.permissions.DjangoModelPermissions'],
         'user_delete': [IsSuperUser],
-        # For activation
-        # 'activation': ['rest_framework.permissions.DjangoModelPermissions'],
-        # For resend_activation and reset_password
-        # 'password_reset': ['rest_framework.permissions.DjangoModelPermissions'],
-        # For reset_password_confirm
-        # 'password_reset_confirm': ['rest_framework.permissions.DjangoModelPermissions'],
-        # For set_password
-        # 'set_password': ['rest_framework.permissions.DjangoModelPermissions'],
-        # For set_username
-        # 'set_username': ['rest_framework.permissions.DjangoModelPermissions'],
-        # For reset_username
-        # 'username_reset': ['rest_framework.permissions.DjangoModelPermissions'],
-        # For reset_username_confirm
-        # 'username_reset_confirm': ['rest_framework.permissions.DjangoModelPermissions'],
-        # For user_delete
-        # 'user_delete': ['rest_framework.permissions.DjangoModelPermissions'],
     }
 }
 SPECTACULAR_SETTINGS = {

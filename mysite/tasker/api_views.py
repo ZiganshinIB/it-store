@@ -1,7 +1,5 @@
-from http.client import responses
-from venv import create
-
 from django.db.models import Q
+
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema_view, extend_schema
 from rest_framework import viewsets, views, generics, mixins, status
@@ -18,6 +16,7 @@ from .models import (
     RequestTemplate, RequestTaskRelation, TaskTemplate,
     Request, Task, Approve, Comment
 )
+from .permissions.Base import IsAuthor, IsCheck
 
 from .serializers import (
     ListApprovalRouteSerializer, DetailApprovalRouteSerializer, UpdateApprovalRouteSerializer,
@@ -426,7 +425,31 @@ class TaskViewSet(viewsets.ModelViewSet):
             201: DetailRequestSerializer,
         }
 
-    )
+    ),
+    cansel=extend_schema(
+        summary="Отмена заявки",
+        description="Только автор заявки может отменить заявку."
+                    "При отмене заявки статус заявки меняется на 'cans'"
+                    "Также отменяются все активные согласовании и задачи."
+                    "Возвращает обновленную заявку",
+        tags=["Запросы"],
+        responses={
+            200: DetailRequestSerializer
+        },
+        methods=['get'],
+    ),
+    end=extend_schema(
+        summary="Завершение заявки",
+        description="Только автор заявки может завершить заявку."
+                    "При завершении заявки статус заявки меняется на 'end'"
+                    "Также отменяются все активные согласовании и задачи."
+                    "Возвращает обновленную заявку",
+        tags=["Запросы"],
+        responses={
+            200: DetailRequestSerializer
+        },
+        methods=['get'],
+    ),
 )
 class RequestViewSet(viewsets.ModelViewSet):
     queryset = Request.objects.all()
@@ -437,12 +460,16 @@ class RequestViewSet(viewsets.ModelViewSet):
         permission_classes = [IsAuthenticated]
         if self.action == 'create':
             permission_classes.append(AllowAny)
+        elif self.action == 'cansel':
+            permission_classes.append(IsAuthor)
+        elif self.action == 'end':
+            permission_classes.append(IsAuthor)
         else:
             permission_classes.append(DjangoModelPermissions)
         return [permission() for permission in permission_classes]
 
     def get_serializer_class(self):
-        if self.action == 'retrieve':
+        if self.action in ['retrieve', 'cansel', 'end']:
             return DetailRequestSerializer
         if self.action == 'create':
             return CreateRequestSerializer
@@ -479,6 +506,53 @@ class RequestViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
+
+    @action(["get"], detail=True)
+    def cansel(self, request, pk) :
+        """
+        При отмене заявки статус заявки меняется на 'cans'.
+        Также отменяются все активные согласования и задачи.
+        Возвращает обновленную заявку (DetailRequestSerializer)
+        :return: Data json DetailRequestSerializer
+        """
+        my_request = self.get_object()
+        my_request.status = 'cans'
+        my_request.closed_at = timezone.now()
+        my_request.cansel_date = timezone.now()
+        tasks = my_request.tasks.filter(status__in=['new', 'prg', 'aprv', 'chk'])
+        tasks.update(status='cans', cansel_date=timezone.now(), closed_at=timezone.now())
+        approves = my_request.approves.filter(status__in=['new', 'prg', 'aprv', 'chk'])
+        approves.update(status='cans', cansel_date=timezone.now(),)
+        my_request.save()
+        my_request = self.get_object()
+        response = self.get_serializer(my_request)
+        return Response(response.data, status=status.HTTP_200_OK)
+
+    @action(["get"], detail=True)
+    def end(self, request, pk):
+        """
+        При завершении заявки статус заявки меняется на 'end'.
+        Также отменяются все активные согласования и задачи.
+        Возвращает обновленную заявку (DetailRequestSerializer)
+        :return:
+        """
+        my_request = self.get_object()
+        if my_request.status != 'chk':
+            # raise ValidationError("Заявка должна быть в статусе 'chk'")
+            return Response("{\"detail\":\"Заявка должна быть в статусе 'chk'\"}", status=status.HTTP_400_BAD_REQUEST)
+        my_request.status = 'end'
+        my_request.cansel_date = timezone.now()
+        my_request.save()
+        # get data tasks and approves
+        tasks = my_request.tasks.filter(status__in=['new', 'prg', 'aprv', 'chk'])
+        tasks.update(status='end', cansel_date=timezone.now(), closed_at=timezone.now())
+        approves = my_request.approves.filter(status__in=['new', 'prg', 'aprv', 'chk'])
+        approves.update(status='end', cansel_date=timezone.now(),)
+
+
+
+
+
 
 
 # class ListRequestView(generics.ListAPIView):

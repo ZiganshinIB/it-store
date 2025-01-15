@@ -34,7 +34,7 @@ class PersonManager(BaseUserManager):
             password = self.model.make_random_password()
         person = self.model(username=username, first_name=first_name, last_name=last_name, email=email, **extra_fields)
         person.set_password(password)
-        person.save(using=self._db)
+        person.save()
         return person
 
 
