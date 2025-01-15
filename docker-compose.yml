@@ -1,13 +1,11 @@
 services:
   django_db:
     image: postgres:16
-    container_name: django_db
+    container_name: django_db_it-store
     environment:
       POSTGRES_USER: "${DJANGO_POSTGRES_USER}"
       POSTGRES_PASSWORD: "${DJANGO_POSTGRES_PASSWORD}"
       POSTGRES_DB: "${DJANGO_POSTGRES_DB}"
-    ports:
-      - "5435:5432"
     volumes:
       - django_data:/var/lib/postgresql/data
     healthcheck:
@@ -19,19 +17,20 @@ services:
 
   django_backend:
     build:
-      context: ./backend_django
-      dockerfile: ./Dockerfile
+      context: .
     image: it-store-backend:latest
     container_name: it-store-backend
     volumes:
-      - ./backend_django/mysite:/webapp/src
+      - ./mysite:/webapp/src
     environment:
       SECRET_KEY: "${DJANGO_SECRET_KEY}"
       DATABASE_URL: "postgres://${DJANGO_POSTGRES_USER}:${DJANGO_POSTGRES_PASSWORD}@django_db:5432/${DJANGO_POSTGRES_DB}"
       ALLOWED_HOSTS: "${DJANGO_ALLOWED_HOSTS}"
       DEBUG: "${DJANGO_DEBUG}"
+    env_file:
+      - .env
     ports:
-      - "8000:8000"
+      - "5480:8000"
     depends_on:
       django_db:
         condition: service_healthy

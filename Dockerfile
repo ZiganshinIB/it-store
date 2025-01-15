@@ -10,7 +10,6 @@ RUN apt update && apt install -y python3-pip                                  \
     && apt remove -y python3-pip                                              \
     && apt autoremove --purge -y                                              \
     && rm -rf /var/lib/apt/lists/* /etc/apt/sources.list.d/*.list
-COPY unit_config.json /docker-entrypoint.d/
 COPY mysite /webapp/src
 WORKDIR /webapp/src
 RUN  SECRET_KEY=empoty  python manage.py collectstatic --noinput
